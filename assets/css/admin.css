@@ -1392,3 +1392,43 @@
     gap: 8px;
   }
 }
+
+/* ===== v0.9.9 UI Polish ===== */
+
+/* ドロップエリア強化 */
+.scg-dropzone {
+  transition: all .25s cubic-bezier(.2,.8,.2,1) !important;
+}
+
+.scg-dropzone.is-dragover {
+  background: #f0f7ff !important;
+  border-color: #0071e3 !important;
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 113, 227, 0.12) !important;
+}
+
+/* フォーカスリング統一 */
+.scg-category-button:focus-visible,
+.button:focus-visible,
+textarea:focus-visible,
+input[type="text"]:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3) !important;
+  border-color: #0a84ff !important;
+}
+
+/* フェードインアニメーション（安全版） */
+.scg-photo-item.scg-animate-in {
+  animation: scgFadeInScale .4s cubic-bezier(.2,.8,.2,1) backwards;
+}
+
+@keyframes scgFadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

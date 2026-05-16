@@ -206,18 +206,22 @@ jQuery(function ($) {
       return;
     }
 
-    items.forEach(function (item) {
-      const badge = currentStatus === 'hidden' ? '<div class="scg-photo-trash-badge">削除済み</div>' : '';
-      grid.append(`
-        <div class="scg-photo-item ${currentStatus === 'hidden' ? 'is-hidden-photo' : ''}" data-id="${item.id}">
-          <div class="scg-photo-thumb">
-            <img src="${item.thumb || ''}" alt="">
-            ${badge}
-            <div class="scg-photo-hover">${currentStatus === 'hidden' ? '復元' : '編集'}</div>
-          </div>
-        </div>
-      `);
-    });
+items.forEach(function (item, index) {
+  const badge = currentStatus === 'hidden' ? '<div class="scg-photo-trash-badge">削除済み</div>' : '';
+  const delay = index * 0.03;
+
+  grid.append(`
+    <div class="scg-photo-item ${currentStatus === 'hidden' ? 'is-hidden-photo' : ''} scg-animate-in"
+         data-id="${item.id}"
+         style="animation-delay: ${delay}s;">
+      <div class="scg-photo-thumb">
+        <img src="${item.thumb || ''}" alt="">
+        ${badge}
+        <div class="scg-photo-hover">${currentStatus === 'hidden' ? '復元' : '編集'}</div>
+      </div>
+    </div>
+  `);
+});
 
     if (currentStatus === 'active') {
       grid.sortable({
@@ -629,7 +633,7 @@ jQuery(function ($) {
         <div class="scg-edit-pointer"></div>
         <div class="scg-edit-header">
           <div class="scg-edit-title">
-            <span class="scg-edit-icon">▣</span>
+            <span class="scg-edit-icon">?</span>
             <strong>${positionLabel}画像を編集中</strong>
             <span>クリックした画像の説明文を編集できます。</span>
           </div>
@@ -666,7 +670,7 @@ jQuery(function ($) {
         <div class="scg-edit-pointer"></div>
         <div class="scg-edit-header">
           <div class="scg-edit-title">
-            <span class="scg-edit-icon">↩</span>
+            <span class="scg-edit-icon">?</span>
             <strong>削除済み画像を選択中</strong>
             <span>復元すると通常のギャラリー管理に戻ります。</span>
           </div>
