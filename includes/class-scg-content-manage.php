@@ -566,8 +566,14 @@ class SCG_Content_Manage {
         require_once ABSPATH . 'wp-admin/includes/image.php';
 
         for ($i = 1; $i <= self::MAX_IMAGES; $i++) {
+            $meta_key = '_scg_image_' . $i;
+            $existing_id = intval(get_post_meta($content_id, $meta_key, true));
+
             if (!empty($_POST['scg_remove_image_' . $i])) {
-                delete_post_meta($content_id, '_scg_image_' . $i);
+                if ($existing_id) {
+                    wp_delete_attachment($existing_id, true);
+                }
+                delete_post_meta($content_id, $meta_key);
                 continue;
             }
 
@@ -599,7 +605,11 @@ class SCG_Content_Manage {
                 return 'upload';
             }
 
-            update_post_meta($content_id, '_scg_image_' . $i, $attachment_id);
+            if ($existing_id && $existing_id !== intval($attachment_id)) {
+                wp_delete_attachment($existing_id, true);
+            }
+
+            update_post_meta($content_id, $meta_key, $attachment_id);
         }
 
         return '';
