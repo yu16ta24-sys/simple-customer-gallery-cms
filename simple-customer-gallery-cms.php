@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Simple Customer Gallery CMS - Stable Phase 4
- * Description: 専用CMS土台、ログイン制御、ギャラリーカテゴリ、写真追加、写真管理までの安定版。
- * Version: 0.9.8
+ * Plugin Name: Simple Customer Gallery CMS - v1.0.2
+ * Description: 専用CMS土台、ログイン制御、ギャラリー管理、画像アップロード、安全化整理版。
+ * Version: 1.0.2
  * Author: TRUSTEPS
  */
 
@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('SCG_CMS_VERSION', '0.9.8');
+define('SCG_CMS_VERSION', '1.0.2');
 define('SCG_CMS_FILE', __FILE__);
 define('SCG_CMS_DIR', plugin_dir_path(__FILE__));
 define('SCG_CMS_URL', plugin_dir_url(__FILE__));

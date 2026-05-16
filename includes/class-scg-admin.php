@@ -63,15 +63,6 @@ class SCG_Admin {
     public static function enqueue_admin_assets($hook) {
         wp_enqueue_style('scg-admin', SCG_CMS_URL . 'assets/css/admin.css', [], SCG_CMS_VERSION);
 
-        if (strpos($hook, 'scg-photo-upload') !== false) {
-            wp_enqueue_script('scg-upload', SCG_CMS_URL . 'assets/js/admin-upload.js', ['jquery'], SCG_CMS_VERSION, true);
-            wp_localize_script('scg-upload', 'SCG_UPLOAD', [
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('scg_upload_photos'),
-                'max_files' => 10,
-            ]);
-        }
-
         if (strpos($hook, 'scg-photo-manage') !== false) {
             wp_enqueue_script('jquery-ui-sortable');
             wp_enqueue_script('scg-manage', SCG_CMS_URL . 'assets/js/admin-manage.js', ['jquery', 'jquery-ui-sortable'], SCG_CMS_VERSION, true);
@@ -80,6 +71,8 @@ class SCG_Admin {
                 'nonce' => wp_create_nonce('scg_manage_photos'),
                 'upload_nonce' => wp_create_nonce('scg_upload_photos'),
                 'max_files' => 10,
+                'max_file_size' => 20 * 1024 * 1024,
+                'max_file_size_label' => '20MB',
             ]);
         }
     }

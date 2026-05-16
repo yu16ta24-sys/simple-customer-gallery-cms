@@ -19,6 +19,8 @@ jQuery(function ($) {
   const selectedFiles = $('#scg-inline-selected-files');
   const uploadSubmit = $('#scg-inline-upload-submit');
 
+  // UI状態は「active=通常」「hidden=復元モード」を軸に管理する。
+  // upload_open は uploadArea の表示状態に集約し、フラグ乱立を避ける。
   let openedId = null;
   let isDragging = false;
   let currentItems = [];
@@ -100,7 +102,13 @@ jQuery(function ($) {
     }
 
     closeEditor();
-    uploadArea.slideToggle(180);
+
+    if (uploadArea.is(':visible')) {
+      closeUploadArea();
+      return;
+    }
+
+    openUploadArea();
   });
 
   dropzone.on('dragover', function (e) {
@@ -206,22 +214,18 @@ jQuery(function ($) {
       return;
     }
 
-items.forEach(function (item, index) {
-  const badge = currentStatus === 'hidden' ? '<div class="scg-photo-trash-badge">削除済み</div>' : '';
-  const delay = index * 0.03;
-
-  grid.append(`
-    <div class="scg-photo-item ${currentStatus === 'hidden' ? 'is-hidden-photo' : ''} scg-animate-in"
-         data-id="${item.id}"
-         style="animation-delay: ${delay}s;">
-      <div class="scg-photo-thumb">
-        <img src="${item.thumb || ''}" alt="">
-        ${badge}
-        <div class="scg-photo-hover">${currentStatus === 'hidden' ? '復元' : '編集'}</div>
-      </div>
-    </div>
-  `);
-});
+    items.forEach(function (item) {
+      const badge = currentStatus === 'hidden' ? '<div class="scg-photo-trash-badge">削除済み</div>' : '';
+      grid.append(`
+        <div class="scg-photo-item ${currentStatus === 'hidden' ? 'is-hidden-photo' : ''}" data-id="${item.id}">
+          <div class="scg-photo-thumb">
+            <img src="${item.thumb || ''}" alt="">
+            ${badge}
+            <div class="scg-photo-hover">${currentStatus === 'hidden' ? '復元' : '編集'}</div>
+          </div>
+        </div>
+      `);
+    });
 
     if (currentStatus === 'active') {
       grid.sortable({
@@ -278,7 +282,15 @@ items.forEach(function (item, index) {
 
   function setUploadFiles(files) {
     const max = Number(SCG_MANAGE.max_files || 10);
-    const validFiles = files.filter(file => file.type.match(/^image\/(jpeg|png|webp)$/));
+    const maxFileSize = Number(SCG_MANAGE.max_file_size || (20 * 1024 * 1024));
+    const maxFileSizeLabel = SCG_MANAGE.max_file_size_label || '20MB';
+    const oversizedFiles = files.filter(file => file.size > maxFileSize);
+
+    if (oversizedFiles.length) {
+      setMessage('ファイルサイズが大きすぎます。' + maxFileSizeLabel + '以内の画像を選択してください。', true);
+    }
+
+    const validFiles = files.filter(file => file.type.match(/^image\/(jpeg|png|webp)$/) && file.size <= maxFileSize);
 
     const currentDescriptions = collectCurrentDescriptions();
 
@@ -478,11 +490,23 @@ items.forEach(function (item, index) {
     xhr.send(formData);
   }
 
+  function openUploadArea() {
+    uploadArea.slideDown(180);
+    uploadToggle.addClass('is-upload-open');
+    uploadToggle.html('<span class="scg-upload-close-icon">⌃</span><span class="scg-upload-close-text">アップロードを閉じる</span><small>待機中の画像をキャンセル</small>');
+  }
+
+  function resetUploadToggle() {
+    uploadToggle.removeClass('is-upload-open');
+    uploadToggle.text('写真を追加（アップロード）する');
+  }
+
   function closeUploadArea() {
     currentFiles = [];
     selectedFiles.html('');
     fileInput.val('');
     uploadArea.slideUp(120);
+    resetUploadToggle();
   }
 
   grid.on('click', '.scg-photo-thumb', function () {
@@ -633,7 +657,7 @@ items.forEach(function (item, index) {
         <div class="scg-edit-pointer"></div>
         <div class="scg-edit-header">
           <div class="scg-edit-title">
-            <span class="scg-edit-icon">?</span>
+            <span class="scg-edit-icon">▣</span>
             <strong>${positionLabel}画像を編集中</strong>
             <span>クリックした画像の説明文を編集できます。</span>
           </div>
@@ -670,7 +694,7 @@ items.forEach(function (item, index) {
         <div class="scg-edit-pointer"></div>
         <div class="scg-edit-header">
           <div class="scg-edit-title">
-            <span class="scg-edit-icon">?</span>
+            <span class="scg-edit-icon">↩</span>
             <strong>削除済み画像を選択中</strong>
             <span>復元すると通常のギャラリー管理に戻ります。</span>
           </div>

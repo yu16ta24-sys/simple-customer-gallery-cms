@@ -1393,42 +1393,54 @@
   }
 }
 
-/* ===== v0.9.9 UI Polish ===== */
 
-/* ドロップエリア強化 */
-.scg-dropzone {
-  transition: all .25s cubic-bezier(.2,.8,.2,1) !important;
+/* v1.0.1 upload toggle close state */
+.scg-bottom-upload-button.is-upload-open {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-height: 50px !important;
+  padding: 9px 18px !important;
+  border-color: #2271b1 !important;
+  color: #135e96 !important;
+  background: linear-gradient(180deg, #f7fbff 0%, #eef6ff 100%) !important;
+  box-shadow: 0 8px 22px rgba(34,113,177,.10) !important;
 }
 
-.scg-dropzone.is-dragover {
-  background: #f0f7ff !important;
-  border-color: #0071e3 !important;
-  transform: scale(1.02);
-  box-shadow: 0 8px 24px rgba(0, 113, 227, 0.12) !important;
+.scg-bottom-upload-button.is-upload-open:hover {
+  background: linear-gradient(180deg, #eef6ff 0%, #e5f1ff 100%) !important;
+  transform: translateY(-1px);
 }
 
-/* フォーカスリング統一 */
-.scg-category-button:focus-visible,
-.button:focus-visible,
-textarea:focus-visible,
-input[type="text"]:focus-visible {
-  outline: none !important;
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3) !important;
-  border-color: #0a84ff !important;
+.scg-upload-close-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(34,113,177,.28);
+  color: #135e96;
+  font-size: 14px;
+  line-height: 1;
 }
 
-/* フェードインアニメーション（安全版） */
-.scg-photo-item.scg-animate-in {
-  animation: scgFadeInScale .4s cubic-bezier(.2,.8,.2,1) backwards;
+.scg-upload-close-text {
+  font-weight: 700;
+  line-height: 1.1;
 }
 
-@keyframes scgFadeInScale {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+.scg-bottom-upload-button.is-upload-open small {
+  display: block;
+  margin-left: -2px;
+  color: #5f748a;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+@media (max-width: 900px) {
+  .scg-bottom-upload-button.is-upload-open {
+    justify-content: center !important;
   }
 }

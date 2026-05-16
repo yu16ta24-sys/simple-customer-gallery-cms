@@ -164,7 +164,6 @@ class SCG_Auth {
 
         $allowed_pages = [
             self::CUSTOMER_HOME_SLUG,
-            'scg-photo-upload',
             'scg-photo-manage',
             'scg-blog-add',
             'scg-blog-list',

@@ -160,6 +160,7 @@ class SCG_Gallery_Manage {
             ]],
             'meta_query' => $meta_query,
             'meta_key' => '_scg_order',
+            'meta_type' => 'NUMERIC',
             'orderby' => 'meta_value_num',
             'order' => 'ASC',
         ]);

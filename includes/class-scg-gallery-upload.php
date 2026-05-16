@@ -53,62 +53,6 @@ class SCG_Gallery_Upload {
         return $map;
     }
 
-    public static function render_upload_page() {
-        if (!current_user_can('upload_files')) {
-            wp_die('権限がありません');
-        }
-
-        $main_categories = self::get_main_categories();
-        $category_map = self::get_category_map();
-        ?>
-        <div class="wrap scg-wrap">
-            <h1>写真を追加</h1>
-
-            <?php if (empty($main_categories) || is_wp_error($main_categories)): ?>
-                <div class="notice notice-warning">
-                    <p>先にギャラリーカテゴリを作成してください。管理者は「専用CMS → カテゴリを管理する」から作成できます。</p>
-                </div>
-            <?php endif; ?>
-
-            <form id="scg-photo-upload-form" class="scg-upload-form" enctype="multipart/form-data">
-                <div class="scg-card">
-                    <label class="scg-label" for="scg-main-category">メインカテゴリ</label>
-                    <select id="scg-main-category" name="main_category" required>
-                        <option value="">選択してください</option>
-                        <?php if (!is_wp_error($main_categories)): ?>
-                            <?php foreach ($main_categories as $cat): ?>
-                                <option value="<?php echo esc_attr($cat->term_id); ?>"><?php echo esc_html($cat->name); ?></option>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </select>
-
-                    <label class="scg-label" for="scg-sub-category">サブカテゴリ</label>
-                    <select id="scg-sub-category" name="sub_category" required>
-                        <option value="">メインカテゴリを選択してください</option>
-                    </select>
-
-                    <div id="scg-dropzone" class="scg-dropzone">
-                        <strong>ここに画像をドラッグ</strong>
-                        <span>または下のボタンから選択</span>
-                        <label for="scg-photo-files" id="scg-file-select-button" class="button scg-file-select-button">画像を選択</label>
-                        <input type="file" id="scg-photo-files" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple>
-                    </div>
-
-                    <p class="scg-help">最大10枚まで。対応形式：jpg / png / webp</p>
-
-                    <div id="scg-selected-files" class="scg-selected-files"></div>
-
-                    <button type="submit" class="button button-primary button-large">アップロードする</button>
-
-                    <div id="scg-upload-message" class="scg-upload-message"></div>
-                </div>
-            </form>
-        </div>
-
-        <script>window.SCG_CATEGORY_MAP = <?php echo wp_json_encode($category_map); ?>;</script>
-        <?php
-    }
-
     public static function handle_upload() {
         if (!current_user_can('upload_files')) {
             wp_send_json_error(['message' => '権限がありません']);
@@ -132,9 +76,16 @@ class SCG_Gallery_Upload {
 
         $files = $_FILES['photos'];
         $file_count = count($files['name']);
+        $max_file_size = 20 * 1024 * 1024;
 
         if ($file_count > 10) {
             wp_send_json_error(['message' => '画像は最大10枚までです']);
+        }
+
+        for ($i = 0; $i < $file_count; $i++) {
+            if (!empty($files['name'][$i]) && !empty($files['size'][$i]) && intval($files['size'][$i]) > $max_file_size) {
+                wp_send_json_error(['message' => 'ファイルサイズが大きすぎます。20MB以内の画像を選択してください。']);
+            }
         }
 
         require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -144,7 +95,14 @@ class SCG_Gallery_Upload {
         $created = [];
 
         for ($i = 0; $i < $file_count; $i++) {
-            if (empty($files['name'][$i]) || !empty($files['error'][$i])) {
+            if (empty($files['name'][$i])) {
+                continue;
+            }
+
+            if (!empty($files['error'][$i])) {
+                if (in_array(intval($files['error'][$i]), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+                    wp_send_json_error(['message' => 'ファイルサイズが大きすぎます。20MB以内の画像を選択してください。']);
+                }
                 continue;
             }
 
@@ -214,6 +172,7 @@ class SCG_Gallery_Upload {
                 'terms' => $sub_category_id,
             ]],
             'meta_key' => '_scg_order',
+            'meta_type' => 'NUMERIC',
             'orderby' => 'meta_value_num',
             'order' => 'DESC',
             'fields' => 'ids',
@@ -232,6 +191,8 @@ class SCG_Gallery_Upload {
         if (!$file_path || !file_exists($file_path)) {
             return false;
         }
+
+        @ini_set('memory_limit', '512M');
 
         $editor = wp_get_image_editor($file_path);
 
