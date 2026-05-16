@@ -23,10 +23,10 @@ class SCG_Admin {
 
         
         add_submenu_page('scg-dashboard', 'ギャラリー管理', 'ギャラリー管理', 'upload_files', 'scg-photo-manage', ['SCG_Gallery_Manage', 'render_manage_page']);
-        add_submenu_page('scg-dashboard', 'ブログを書く', 'ブログを書く', 'edit_posts', 'scg-blog-add', [__CLASS__, 'render_placeholder']);
-        add_submenu_page('scg-dashboard', 'ブログ一覧', 'ブログ一覧', 'edit_posts', 'scg-blog-list', [__CLASS__, 'render_placeholder']);
-        add_submenu_page('scg-dashboard', 'お知らせを書く', 'お知らせを書く', 'edit_posts', 'scg-news-add', [__CLASS__, 'render_placeholder']);
-        add_submenu_page('scg-dashboard', 'お知らせ一覧', 'お知らせ一覧', 'edit_posts', 'scg-news-list', [__CLASS__, 'render_placeholder']);
+        add_submenu_page('scg-dashboard', 'ブログを書く', 'ブログを書く', 'edit_posts', 'scg-blog-add', ['SCG_Content_Manage', 'render_blog_edit_page']);
+        add_submenu_page('scg-dashboard', 'ブログ一覧', 'ブログ一覧', 'edit_posts', 'scg-blog-list', ['SCG_Content_Manage', 'render_blog_list_page']);
+        add_submenu_page('scg-dashboard', 'お知らせを書く', 'お知らせを書く', 'edit_posts', 'scg-news-add', ['SCG_Content_Manage', 'render_news_edit_page']);
+        add_submenu_page('scg-dashboard', 'お知らせ一覧', 'お知らせ一覧', 'edit_posts', 'scg-news-list', ['SCG_Content_Manage', 'render_news_list_page']);
 
         add_submenu_page(
             'scg-dashboard',
@@ -52,6 +52,8 @@ class SCG_Admin {
         remove_menu_page('upload.php');
         remove_menu_page('edit.php?post_type=page');
         remove_menu_page('edit.php?post_type=scg_photo');
+        remove_menu_page('edit.php?post_type=scg_blog');
+        remove_menu_page('edit.php?post_type=scg_news');
         remove_menu_page('edit-comments.php');
         remove_menu_page('themes.php');
         remove_menu_page('plugins.php');
@@ -77,15 +79,4 @@ class SCG_Admin {
         }
     }
 
-    public static function render_placeholder() {
-        $title = get_admin_page_title();
-        ?>
-        <div class="wrap scg-wrap">
-            <h1><?php echo esc_html($title); ?></h1>
-            <div class="scg-card">
-                <p>この画面は次フェーズで実装します。</p>
-            </div>
-        </div>
-        <?php
-    }
 }
