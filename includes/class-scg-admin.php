@@ -65,7 +65,10 @@ class SCG_Admin {
     public static function enqueue_admin_assets($hook) {
         wp_enqueue_style('scg-admin', SCG_CMS_URL . 'assets/css/admin.css', [], SCG_CMS_VERSION);
 
-        if (strpos($hook, 'scg-photo-manage') !== false) {
+        $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+        $is_gallery_manage = ($page === 'scg-photo-manage') || (strpos((string) $hook, 'scg-photo-manage') !== false);
+
+        if ($is_gallery_manage) {
             wp_enqueue_script('jquery-ui-sortable');
             wp_enqueue_script('scg-manage', SCG_CMS_URL . 'assets/js/admin-manage.js', ['jquery', 'jquery-ui-sortable'], SCG_CMS_VERSION, true);
             wp_localize_script('scg-manage', 'SCG_MANAGE', [

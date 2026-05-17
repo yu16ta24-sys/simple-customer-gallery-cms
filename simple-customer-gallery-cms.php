@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Simple Customer Gallery CMS - v1.1.3
+ * Plugin Name: Simple Customer Gallery CMS - v1.2.4
  * Description: 専用CMS土台、ギャラリー管理、ブログ管理、お知らせ管理。
- * Version: 1.1.4
+ * Version: 1.2.6
  * Author: TRUSTEPS
  */
 
@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('SCG_CMS_VERSION', '1.1.4');
+define('SCG_CMS_VERSION', '1.2.6');
 define('SCG_CMS_FILE', __FILE__);
 define('SCG_CMS_DIR', plugin_dir_path(__FILE__));
 define('SCG_CMS_URL', plugin_dir_url(__FILE__));
@@ -21,6 +21,7 @@ require_once SCG_CMS_DIR . 'includes/class-scg-gallery-post-type.php';
 require_once SCG_CMS_DIR . 'includes/class-scg-gallery-taxonomy.php';
 require_once SCG_CMS_DIR . 'includes/class-scg-content-post-type.php';
 require_once SCG_CMS_DIR . 'includes/class-scg-content-manage.php';
+require_once SCG_CMS_DIR . 'includes/class-scg-front-gallery.php';
 require_once SCG_CMS_DIR . 'includes/class-scg-gallery-upload.php';
 require_once SCG_CMS_DIR . 'includes/class-scg-gallery-manage.php';
 require_once SCG_CMS_DIR . 'includes/class-scg-dashboard.php';
@@ -45,6 +46,7 @@ add_action('plugins_loaded', function () {
     SCG_Content_Post_Type::init();
     SCG_Gallery_Upload::init();
     SCG_Content_Manage::init();
+    SCG_Front_Gallery::init();
     SCG_Gallery_Manage::init();
     SCG_Dashboard::init();
     SCG_Admin::init();

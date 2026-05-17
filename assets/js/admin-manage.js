@@ -389,6 +389,51 @@ jQuery(function ($) {
     }
   });
 
+
+  function ensureUploadProgress() {
+    let progress = $('#scg-inline-upload-progress');
+
+    if (!progress.length) {
+      progress = $(`
+        <div id="scg-inline-upload-progress" class="scg-upload-progress" style="display:none;">
+          <div class="scg-upload-progress-head">
+            <span class="scg-upload-progress-message">アップロード準備中...</span>
+            <span class="scg-upload-progress-percent">0%</span>
+          </div>
+          <div class="scg-upload-progress-track">
+            <div class="scg-upload-progress-bar"></div>
+          </div>
+        </div>
+      `);
+      uploadSubmit.before(progress);
+    }
+
+    return progress;
+  }
+
+  function setUploadProgress(percent, messageText) {
+    const progress = ensureUploadProgress();
+    const safePercent = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+
+    progress.show();
+    progress.find('.scg-upload-progress-message').text(messageText || 'アップロード中...');
+    progress.find('.scg-upload-progress-percent').text(safePercent + '%');
+    progress.find('.scg-upload-progress-bar').css('width', safePercent + '%');
+  }
+
+  function hideUploadProgress(delay) {
+    const progress = $('#scg-inline-upload-progress');
+    if (!progress.length) return;
+
+    window.setTimeout(function () {
+      progress.fadeOut(180, function () {
+        progress.removeClass('is-processing');
+        progress.find('.scg-upload-progress-bar').css('width', '0%');
+        progress.find('.scg-upload-progress-percent').text('0%');
+      });
+    }, Number(delay) || 0);
+  }
+
   function uploadSelectedFiles() {
     if (!subValue.val() || !mainValue.val()) {
       setMessage('先にカテゴリーを選択してください', true);
