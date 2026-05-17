@@ -7,7 +7,6 @@
     var maxItems = parseInt(cfg.max_items || 12, 10);
     var maxFileSize = parseInt(cfg.max_file_size || 0, 10);
     var messages = cfg.messages || {};
-    var uploadQueue = [];
     var isUploadingQueue = false;
 
     function getCount() {
@@ -316,6 +315,106 @@
         });
     }
 
+    function collectAdjustValues($panel) {
+        var values = {};
+        $panel.find('.scg-slider-adjust-range').each(function() {
+            var $input = $(this);
+            var device = $input.data('device') || 'pc';
+            var field = $input.data('field') || 'y';
+            if (!values[device]) {
+                values[device] = {};
+            }
+            values[device][field] = parseInt($input.val(), 10);
+        });
+        return values;
+    }
+
+    function applyAdjustPreview($panel, device) {
+        var values = collectAdjustValues($panel);
+        var v = values[device] || {};
+        var x = isNaN(v.x) ? 50 : v.x;
+        var y = isNaN(v.y) ? 50 : v.y;
+        var zoom = isNaN(v.zoom) ? 100 : v.zoom;
+        var $img = $panel.find('[data-preview-device="' + device + '"] img');
+        // v1.6.9: X/Yは object-position と transform-origin で制御する。
+        // translateで画像自体を動かすと表示枠外まで移動できてしまうため、
+        // 画像外側の余白が出ない安全な方式へ変更。
+        $img.css({
+            'object-position': x + '% ' + y + '%',
+            'transform-origin': x + '% ' + y + '%',
+            'transform': 'scale(' + (zoom / 100) + ')'
+        });
+    }
+
+    function saveAdjustment($panel) {
+        var attachmentId = parseInt($panel.data('attachment-id'), 10);
+        if (!attachmentId) {
+            return;
+        }
+        var values = collectAdjustValues($panel);
+        var $status = $panel.find('.scg-slider-adjust-status');
+        var payload = {
+            action: 'scg_top_slider_save_position',
+            nonce: nonce,
+            attachment_id: attachmentId
+        };
+        ['pc', 'tablet', 'mobile'].forEach(function(device) {
+            payload[device] = values[device] || { x: 50, y: 50, zoom: 100 };
+        });
+        $status.text('保存中...').removeClass('is-error');
+        $.post(ajaxUrl, payload).done(function(response) {
+            if (!response || !response.success) {
+                var msg = response && response.data && response.data.message ? response.data.message : (messages.error || '保存に失敗しました。');
+                $status.text(msg).addClass('is-error');
+                showNotice(msg, true);
+                return;
+            }
+            $status.text('保存しました。').removeClass('is-error');
+            showNotice('表示位置を保存しました。', false);
+        }).fail(function() {
+            $status.text(messages.error || '保存に失敗しました。').addClass('is-error');
+            showNotice(messages.error || '保存に失敗しました。', true);
+        });
+    }
+
+    function bindAdjustmentControls() {
+        $(document).on('click', '.scg-slider-adjust-toggle', function() {
+            var $button = $(this);
+            var $row = $button.closest('.scg-slider-row');
+            var $panel = $row.find('.scg-slider-adjust-panel');
+            var isOpen = !$panel.prop('hidden');
+
+            $('.scg-slider-adjust-panel').prop('hidden', true);
+            $('.scg-slider-row').removeClass('is-adjust-open');
+            $('.scg-slider-adjust-toggle').text('表示位置を調整する');
+            $('body').removeClass('scg-slider-adjusting');
+
+            if (!isOpen) {
+                $panel.prop('hidden', false);
+                $row.addClass('is-adjust-open');
+                $('body').addClass('scg-slider-adjusting');
+                $button.text('表示位置調整を閉じる');
+                ['pc', 'tablet', 'mobile'].forEach(function(device) {
+                    applyAdjustPreview($panel, device);
+                });
+            }
+        });
+
+        $(document).on('input change', '.scg-slider-adjust-range', function() {
+            var $input = $(this);
+            var $panel = $input.closest('.scg-slider-adjust-panel');
+            var device = $input.data('device') || 'pc';
+            var unit = $input.data('field') === 'zoom' ? '%' : '%';
+            $input.closest('.scg-slider-adjust-row').find('output').text($input.val() + unit);
+            applyAdjustPreview($panel, device);
+            $panel.find('.scg-slider-adjust-status').text('未保存の変更があります。').removeClass('is-error');
+        });
+
+        $(document).on('click', '.scg-slider-adjust-save', function() {
+            saveAdjustment($(this).closest('.scg-slider-adjust-panel'));
+        });
+    }
+
     function bindDelete() {
         $(document).on('click', '.scg-slider-delete-button', function() {
             var $button = $(this);
@@ -361,6 +460,7 @@
         syncRangeOutputs();
         bindUploader();
         bindDelete();
+        bindAdjustmentControls();
         updateCountUi();
     });
 })(jQuery);

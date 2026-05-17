@@ -8,6 +8,15 @@ class SCG_Top_Slider {
     const OPTION_INTERVAL = 'scg_top_slider_interval';
     const OPTION_FADE = 'scg_top_slider_fade';
     const MAX_ITEMS = 12;
+    const META_PC_X = '_scg_slider_pc_x';
+    const META_PC_Y = '_scg_slider_pc_y';
+    const META_PC_ZOOM = '_scg_slider_pc_zoom';
+    const META_TABLET_X = '_scg_slider_tablet_x';
+    const META_TABLET_Y = '_scg_slider_tablet_y';
+    const META_TABLET_ZOOM = '_scg_slider_tablet_zoom';
+    const META_MOBILE_X = '_scg_slider_mobile_x';
+    const META_MOBILE_Y = '_scg_slider_mobile_y';
+    const META_MOBILE_ZOOM = '_scg_slider_mobile_zoom';
 
     public static function init() {
         add_option(self::OPTION_INTERVAL, 5000);
@@ -16,6 +25,7 @@ class SCG_Top_Slider {
         add_action('wp_ajax_scg_top_slider_upload', [__CLASS__, 'ajax_upload']);
         add_action('wp_ajax_scg_top_slider_delete', [__CLASS__, 'ajax_delete']);
         add_action('wp_ajax_scg_top_slider_save_order', [__CLASS__, 'ajax_save_order']);
+        add_action('wp_ajax_scg_top_slider_save_position', [__CLASS__, 'ajax_save_position']);
     }
 
     public static function get_settings() {
@@ -119,6 +129,101 @@ class SCG_Top_Slider {
         <?php
     }
 
+    private static function get_device_config() {
+        return [
+            'pc' => [
+                'label' => 'PC',
+                'ratio' => '3:1',
+                'meta_x' => self::META_PC_X,
+                'meta_y' => self::META_PC_Y,
+                'meta_zoom' => self::META_PC_ZOOM,
+            ],
+            'tablet' => [
+                'label' => 'タブレット',
+                'ratio' => '16:7',
+                'meta_x' => self::META_TABLET_X,
+                'meta_y' => self::META_TABLET_Y,
+                'meta_zoom' => self::META_TABLET_ZOOM,
+            ],
+            'mobile' => [
+                'label' => 'スマホ',
+                'ratio' => '1:1',
+                'meta_x' => self::META_MOBILE_X,
+                'meta_y' => self::META_MOBILE_Y,
+                'meta_zoom' => self::META_MOBILE_ZOOM,
+            ],
+        ];
+    }
+
+    private static function get_slide_adjustments($attachment_id) {
+        $values = [];
+        foreach (self::get_device_config() as $device => $config) {
+            $x = get_post_meta($attachment_id, $config['meta_x'], true);
+            $y = get_post_meta($attachment_id, $config['meta_y'], true);
+            $zoom = get_post_meta($attachment_id, $config['meta_zoom'], true);
+
+            $values[$device] = [
+                'x' => ($x === '' || $x === null) ? 50 : max(0, min(100, (int) $x)),
+                'y' => ($y === '' || $y === null) ? 50 : max(0, min(100, (int) $y)),
+                'zoom' => ($zoom === '' || $zoom === null) ? 100 : max(100, min(200, (int) $zoom)),
+            ];
+        }
+        return $values;
+    }
+
+    private static function render_adjustment_controls($attachment_id, $image_url) {
+        $values = self::get_slide_adjustments($attachment_id);
+        $devices = self::get_device_config();
+        ?>
+        <div class="scg-slider-adjust-panel" data-attachment-id="<?php echo esc_attr($attachment_id); ?>" hidden>
+            <div class="scg-slider-adjust-layout">
+                <div class="scg-slider-adjust-previews">
+                    <p class="scg-slider-adjust-title">表示プレビュー</p>
+                    <?php foreach ($devices as $device => $config): ?>
+                        <?php $v = $values[$device]; ?>
+                        <div class="scg-slider-device-preview scg-slider-device-preview-<?php echo esc_attr($device); ?>" data-preview-device="<?php echo esc_attr($device); ?>">
+                            <div class="scg-slider-device-label"><?php echo esc_html($config['label']); ?> <span><?php echo esc_html($config['ratio']); ?></span></div>
+                            <div class="scg-slider-device-frame" style="--scg-preview-ratio: <?php echo esc_attr(str_replace(':', ' / ', $config['ratio'])); ?>;">
+                                <?php $preview_shift_x = (50 - (int) $v['x']) * 0.24; $preview_shift_y = (50 - (int) $v['y']) * 0.24; ?>
+                                <img src="<?php echo esc_url($image_url); ?>" alt="" style="object-position: <?php echo esc_attr($v['x']); ?>% <?php echo esc_attr($v['y']); ?>%; transform-origin: center center; transform: translate(<?php echo esc_attr($preview_shift_x); ?>%, <?php echo esc_attr($preview_shift_y); ?>%) scale(<?php echo esc_attr($v['zoom'] / 100); ?>);">
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="scg-slider-adjust-controls">
+                    <p class="scg-slider-adjust-title">表示位置の調整</p>
+                    <?php foreach ($devices as $device => $config): ?>
+                        <?php $v = $values[$device]; ?>
+                        <div class="scg-slider-device-controls" data-control-device="<?php echo esc_attr($device); ?>">
+                            <h3><?php echo esc_html($config['label']); ?></h3>
+                            <?php
+                            self::render_adjust_range($attachment_id, $device, 'x', '左右位置', $v['x'], 0, 100, 1, '%');
+                            self::render_adjust_range($attachment_id, $device, 'y', '上下位置', $v['y'], 0, 100, 1, '%');
+                            self::render_adjust_range($attachment_id, $device, 'zoom', '拡大率', $v['zoom'], 100, 200, 1, '%');
+                            ?>
+                        </div>
+                    <?php endforeach; ?>
+                    <div class="scg-slider-adjust-actions">
+                        <button type="button" class="button button-primary scg-slider-adjust-save" data-attachment-id="<?php echo esc_attr($attachment_id); ?>">表示位置を保存</button>
+                        <span class="scg-slider-adjust-status" aria-live="polite"></span>
+                    </div>
+                </div>
+            </div>
+            <p class="scg-slider-position-help">PCは3:1、タブレットは16:7、スマホは1:1の枠で表示されます。拡大率は余白が出ない100%以上に制限しています。</p>
+        </div>
+        <?php
+    }
+
+    private static function render_adjust_range($attachment_id, $device, $field, $label, $value, $min, $max, $step, $unit) {
+        ?>
+        <label class="scg-slider-adjust-row">
+            <span><?php echo esc_html($label); ?></span>
+            <input class="scg-slider-adjust-range" type="range" min="<?php echo esc_attr($min); ?>" max="<?php echo esc_attr($max); ?>" step="<?php echo esc_attr($step); ?>" value="<?php echo esc_attr($value); ?>" data-attachment-id="<?php echo esc_attr($attachment_id); ?>" data-device="<?php echo esc_attr($device); ?>" data-field="<?php echo esc_attr($field); ?>">
+            <output><?php echo esc_html($value . $unit); ?></output>
+        </label>
+        <?php
+    }
+
     private static function render_slider_row($attachment_id) {
         $thumb = wp_get_attachment_image_url($attachment_id, 'medium');
         $full = wp_get_attachment_image_url($attachment_id, 'full');
@@ -139,6 +244,8 @@ class SCG_Top_Slider {
                 <?php if ($full): ?>
                     <a href="<?php echo esc_url($full); ?>" target="_blank" rel="noopener">画像を確認</a>
                 <?php endif; ?>
+                <button type="button" class="button scg-slider-adjust-toggle" data-attachment-id="<?php echo esc_attr($attachment_id); ?>">表示位置を調整する</button>
+                <?php self::render_adjustment_controls($attachment_id, $full ?: $thumb); ?>
             </div>
             <button type="button" class="button scg-slider-delete-button" data-attachment-id="<?php echo esc_attr($attachment_id); ?>">この画像を削除</button>
         </li>
@@ -293,6 +400,46 @@ class SCG_Top_Slider {
         wp_send_json_success(['message' => '並び順を保存しました。']);
     }
 
+    public static function ajax_save_position() {
+        if (!current_user_can('upload_files')) {
+            wp_send_json_error(['message' => '表示位置を保存する権限がありません。']);
+        }
+        check_ajax_referer('scg_top_slider_ajax', 'nonce');
+
+        $attachment_id = isset($_POST['attachment_id']) ? absint(wp_unslash($_POST['attachment_id'])) : 0;
+        if (!$attachment_id || !in_array($attachment_id, self::get_items(), true)) {
+            wp_send_json_error(['message' => '対象のスライダー画像が見つかりません。']);
+        }
+
+        $devices = self::get_device_config();
+        $saved = [];
+        foreach ($devices as $device => $config) {
+            $raw = isset($_POST[$device]) && is_array($_POST[$device]) ? wp_unslash($_POST[$device]) : [];
+            $x = isset($raw['x']) ? (int) $raw['x'] : 50;
+            $y = isset($raw['y']) ? (int) $raw['y'] : 50;
+            $zoom = isset($raw['zoom']) ? (int) $raw['zoom'] : 100;
+
+            $x = max(0, min(100, $x));
+            $y = max(0, min(100, $y));
+            $zoom = max(100, min(200, $zoom));
+
+            update_post_meta($attachment_id, $config['meta_x'], $x);
+            update_post_meta($attachment_id, $config['meta_y'], $y);
+            update_post_meta($attachment_id, $config['meta_zoom'], $zoom);
+
+            $saved[$device] = [
+                'x' => $x,
+                'y' => $y,
+                'zoom' => $zoom,
+            ];
+        }
+
+        wp_send_json_success([
+            'message' => '表示位置を保存しました。',
+            'values' => $saved,
+        ]);
+    }
+
     public static function render_shortcode($atts = []) {
         $settings = self::get_settings();
         $atts = shortcode_atts([
@@ -320,6 +467,7 @@ class SCG_Top_Slider {
                 'id' => $attachment_id,
                 'url' => $image,
                 'alt' => get_post_meta($attachment_id, '_wp_attachment_image_alt', true) ?: get_the_title($attachment_id),
+                'adjust' => self::get_slide_adjustments($attachment_id),
             ];
         }
 
@@ -343,7 +491,15 @@ class SCG_Top_Slider {
              style="--scg-top-slider-fade-ms: <?php echo esc_attr($fade); ?>ms;">
             <div class="scg-top-slider-track">
                 <?php foreach ($slides as $index => $slide): ?>
-                    <figure class="scg-top-slide <?php echo $index === 0 ? 'is-active' : ''; ?>" data-index="<?php echo esc_attr($index); ?>">
+                    <?php
+                    $pc_tx = (50 - (int) $slide['adjust']['pc']['x']) * 0.24;
+                    $pc_ty = (50 - (int) $slide['adjust']['pc']['y']) * 0.24;
+                    $tablet_tx = (50 - (int) $slide['adjust']['tablet']['x']) * 0.24;
+                    $tablet_ty = (50 - (int) $slide['adjust']['tablet']['y']) * 0.24;
+                    $mobile_tx = (50 - (int) $slide['adjust']['mobile']['x']) * 0.24;
+                    $mobile_ty = (50 - (int) $slide['adjust']['mobile']['y']) * 0.24;
+                    ?>
+                    <figure class="scg-top-slide <?php echo $index === 0 ? 'is-active' : ''; ?>" data-index="<?php echo esc_attr($index); ?>" style="--scg-slide-x-pc: <?php echo esc_attr($slide['adjust']['pc']['x']); ?>%; --scg-slide-y-pc: <?php echo esc_attr($slide['adjust']['pc']['y']); ?>%; --scg-slide-zoom-pc: <?php echo esc_attr($slide['adjust']['pc']['zoom'] / 100); ?>; --scg-slide-tx-pc: <?php echo esc_attr($pc_tx); ?>%; --scg-slide-ty-pc: <?php echo esc_attr($pc_ty); ?>%; --scg-slide-x-tablet: <?php echo esc_attr($slide['adjust']['tablet']['x']); ?>%; --scg-slide-y-tablet: <?php echo esc_attr($slide['adjust']['tablet']['y']); ?>%; --scg-slide-zoom-tablet: <?php echo esc_attr($slide['adjust']['tablet']['zoom'] / 100); ?>; --scg-slide-tx-tablet: <?php echo esc_attr($tablet_tx); ?>%; --scg-slide-ty-tablet: <?php echo esc_attr($tablet_ty); ?>%; --scg-slide-x-mobile: <?php echo esc_attr($slide['adjust']['mobile']['x']); ?>%; --scg-slide-y-mobile: <?php echo esc_attr($slide['adjust']['mobile']['y']); ?>%; --scg-slide-zoom-mobile: <?php echo esc_attr($slide['adjust']['mobile']['zoom'] / 100); ?>; --scg-slide-tx-mobile: <?php echo esc_attr($mobile_tx); ?>%; --scg-slide-ty-mobile: <?php echo esc_attr($mobile_ty); ?>%;">
                         <img src="<?php echo esc_url($slide['url']); ?>" alt="<?php echo esc_attr($slide['alt']); ?>" loading="<?php echo $index === 0 ? 'eager' : 'lazy'; ?>">
                     </figure>
                 <?php endforeach; ?>

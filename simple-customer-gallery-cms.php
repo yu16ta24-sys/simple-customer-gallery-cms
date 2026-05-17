@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Customer Gallery CMS
  * Description: 専用CMS土台、ギャラリー管理、ブログ管理、お知らせ管理。
- * Version: 1.6.5
+ * Version: 1.6.9
  * Author: TRUSTEPS
  */
 
@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('SCG_CMS_VERSION', '1.6.5');
+define('SCG_CMS_VERSION', '1.6.9');
 define('SCG_CMS_FILE', __FILE__);
 define('SCG_CMS_DIR', plugin_dir_path(__FILE__));
 define('SCG_CMS_URL', plugin_dir_url(__FILE__));
