@@ -26,8 +26,8 @@
   function getUrlState($app) {
     var params = new URLSearchParams(window.location.search);
     return {
-      main: params.get('main') || $app.data('initial-main') || '',
-      sub: params.get('sub') || $app.data('initial-sub') || ''
+      main: params.get('scg_main') || $app.data('initial-main') || '',
+      sub: params.get('scg_sub') || $app.data('initial-sub') || ''
     };
   }
 
@@ -35,14 +35,14 @@
     if (!window.history || !window.history.pushState) return;
     var url = new URL(window.location.href);
     if (parent && parent.slug) {
-      url.searchParams.set('main', parent.slug);
+      url.searchParams.set('scg_main', parent.slug);
     } else {
-      url.searchParams.delete('main');
+      url.searchParams.delete('scg_main');
     }
     if (child && child.slug) {
-      url.searchParams.set('sub', child.slug);
+      url.searchParams.set('scg_sub', child.slug);
     } else {
-      url.searchParams.delete('sub');
+      url.searchParams.delete('scg_sub');
     }
     var state = { scgGallery: true, main: parent ? parent.slug : '', sub: child ? child.slug : '' };
     if (replace) {

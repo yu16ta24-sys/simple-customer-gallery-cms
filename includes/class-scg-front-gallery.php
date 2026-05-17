@@ -29,8 +29,8 @@ class SCG_Front_Gallery {
             ],
         ]);
 
-        $initial_main = isset($_GET['main']) ? sanitize_title(wp_unslash($_GET['main'])) : '';
-        $initial_sub = isset($_GET['sub']) ? sanitize_title(wp_unslash($_GET['sub'])) : '';
+        $initial_main = isset($_GET['scg_main']) ? sanitize_title(wp_unslash($_GET['scg_main'])) : '';
+        $initial_sub = isset($_GET['scg_sub']) ? sanitize_title(wp_unslash($_GET['scg_sub'])) : '';
         $instance_id = 'scg-front-gallery-' . wp_generate_uuid4();
         $classes = trim('scg-front-gallery ' . sanitize_html_class($atts['class']));
 
