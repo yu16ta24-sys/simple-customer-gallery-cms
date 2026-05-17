@@ -81,6 +81,7 @@ class SCG_Content_Manage {
         $title = $post ? $post->post_title : '';
         $body = $post ? $post->post_content : '';
         $post_status = $post ? $post->post_status : 'publish';
+        $post_datetime = self::get_blog_datetime_value($post);
         $message = isset($_GET['scg_message']) ? sanitize_key($_GET['scg_message']) : '';
         $error = isset($_GET['scg_error']) ? sanitize_key($_GET['scg_error']) : '';
         ?>
@@ -101,6 +102,10 @@ class SCG_Content_Manage {
 
                 <label class="scg-label" for="scg-content-body">本文</label>
                 <textarea id="scg-content-body" name="scg_body" class="scg-content-body" rows="12" placeholder="本文を入力してください"><?php echo esc_textarea($body); ?></textarea>
+
+                <label class="scg-label" for="scg-post-datetime">投稿日時</label>
+                <input type="datetime-local" id="scg-post-datetime" name="scg_post_datetime" class="regular-text" value="<?php echo esc_attr($post_datetime); ?>">
+                <p class="scg-help">ブログ一覧・フロント表示の並び順に反映されます。未入力の場合は現在日時で保存されます。</p>
 
                 <div class="scg-content-status-row">
                     <span class="scg-label scg-inline-label">公開状態</span>
@@ -380,6 +385,24 @@ class SCG_Content_Manage {
         });
         </script>
         <?php
+    }
+
+    private static function get_blog_datetime_value($post) {
+        if ($post && !empty($post->post_date) && $post->post_date !== '0000-00-00 00:00:00') {
+            return mysql2date('Y-m-d\TH:i', $post->post_date, false);
+        }
+
+        return current_time('Y-m-d\TH:i');
+    }
+
+    private static function get_blog_post_date_from_request() {
+        $raw_datetime = isset($_POST['scg_post_datetime']) ? sanitize_text_field(wp_unslash($_POST['scg_post_datetime'])) : '';
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $raw_datetime)) {
+            return str_replace('T', ' ', $raw_datetime) . ':00';
+        }
+
+        return current_time('mysql');
     }
 
     private static function render_news_notice_form($config, $content_id, $post, $post_status, $is_edit) {
@@ -701,7 +724,9 @@ class SCG_Content_Manage {
                 <h2><?php echo esc_html($post->post_title ?: '無題'); ?></h2>
                 <div class="scg-content-row-meta">
                     <span class="scg-status-pill <?php echo $post->post_status === 'publish' ? 'is-publish' : 'is-draft'; ?>"><?php echo esc_html($label); ?></span>
-                    <span>画像 <?php echo esc_html($image_count); ?>枚</span>
+                    <?php if (($config['type'] ?? '') === 'blog'): ?>
+                        <span>画像 <?php echo esc_html($image_count); ?>枚</span>
+                    <?php endif; ?>
                 </div>
             </div>
             <div class="scg-content-row-actions">
@@ -768,6 +793,8 @@ class SCG_Content_Manage {
             $title = '無題';
         }
 
+        $post_date = self::get_blog_post_date_from_request();
+
         if ($content_id) {
             $existing = get_post($content_id);
             if (!$existing || $existing->post_type !== $config['post_type']) {
@@ -779,6 +806,8 @@ class SCG_Content_Manage {
                 'post_title' => $title,
                 'post_content' => $body,
                 'post_status' => $post_status,
+                'post_date' => $post_date,
+                'post_date_gmt' => get_gmt_from_date($post_date),
             ], true);
         } else {
             $result = wp_insert_post([
@@ -787,6 +816,8 @@ class SCG_Content_Manage {
                 'post_content' => $body,
                 'post_status' => $post_status,
                 'post_author' => get_current_user_id(),
+                'post_date' => $post_date,
+                'post_date_gmt' => get_gmt_from_date($post_date),
             ], true);
         }
 

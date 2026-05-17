@@ -9,6 +9,9 @@ class SCG_Admin {
         add_action('admin_menu', [__CLASS__, 'register_menu']);
         add_action('admin_menu', [__CLASS__, 'restrict_menu_for_customer'], 999);
         add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_admin_assets']);
+        add_filter('admin_body_class', [__CLASS__, 'admin_body_class']);
+        add_action('admin_head', [__CLASS__, 'customer_admin_chrome_css']);
+        add_action('in_admin_header', [__CLASS__, 'render_customer_cms_nav']);
     }
 
     public static function register_menu() {
@@ -72,6 +75,97 @@ class SCG_Admin {
         remove_menu_page('options-general.php');
     }
 
+
+
+    private static function is_customer_manager() {
+        if (!is_user_logged_in() || current_user_can('manage_options')) {
+            return false;
+        }
+
+        $user = wp_get_current_user();
+        return in_array('customer_manager', (array) $user->roles, true);
+    }
+
+    public static function admin_body_class($classes) {
+        if (self::is_customer_manager()) {
+            $classes .= ' scg-customer-shell';
+        }
+        return $classes;
+    }
+
+    public static function customer_admin_chrome_css() {
+        if (!self::is_customer_manager()) {
+            return;
+        }
+        ?>
+        <style>
+            body.scg-customer-shell #wpadminbar,
+            body.scg-customer-shell #adminmenuback,
+            body.scg-customer-shell #adminmenuwrap,
+            body.scg-customer-shell #wpfooter,
+            body.scg-customer-shell .update-nag,
+            body.scg-customer-shell .notice:not(.scg-keep-notice) {
+                display: none !important;
+            }
+            body.scg-customer-shell.wp-admin {
+                padding-top: 0 !important;
+                background: #f5f5f7;
+            }
+            body.scg-customer-shell #wpcontent,
+            body.scg-customer-shell #wpfooter {
+                margin-left: 0 !important;
+            }
+            body.scg-customer-shell #wpcontent {
+                padding-left: 32px !important;
+                padding-right: 32px !important;
+                box-sizing: border-box;
+            }
+            body.scg-customer-shell #wpbody-content {
+                padding-bottom: 48px;
+            }
+            body.scg-customer-shell .wrap.scg-wrap {
+                max-width: 1180px;
+                margin: 18px auto 0;
+            }
+            @media (max-width: 782px) {
+                body.scg-customer-shell #wpcontent {
+                    padding-left: 16px !important;
+                    padding-right: 16px !important;
+                }
+            }
+        </style>
+        <?php
+    }
+
+    public static function render_customer_cms_nav() {
+        if (!self::is_customer_manager()) {
+            return;
+        }
+
+        $current_page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+        $items = [
+            'scg-dashboard' => ['label' => '専用CMSトップ', 'url' => admin_url('admin.php?page=scg-dashboard')],
+            'scg-photo-manage' => ['label' => 'ギャラリー管理', 'url' => admin_url('admin.php?page=scg-photo-manage')],
+            'scg-blog-add' => ['label' => 'ブログを書く', 'url' => admin_url('admin.php?page=scg-blog-add')],
+            'scg-blog-list' => ['label' => 'ブログ一覧', 'url' => admin_url('admin.php?page=scg-blog-list')],
+            'scg-news-add' => ['label' => 'お知らせを書く', 'url' => admin_url('admin.php?page=scg-news-add')],
+            'scg-news-list' => ['label' => 'お知らせ一覧', 'url' => admin_url('admin.php?page=scg-news-list')],
+        ];
+        $logout_url = wp_logout_url(home_url('/login/'));
+        ?>
+        <div class="scg-customer-nav" role="navigation" aria-label="専用CMSメニュー">
+            <div class="scg-customer-nav-inner">
+                <div class="scg-customer-nav-brand">専用CMS</div>
+                <div class="scg-customer-nav-links">
+                    <?php foreach ($items as $page => $item): ?>
+                        <a class="scg-customer-nav-link <?php echo $current_page === $page ? 'is-active' : ''; ?>" href="<?php echo esc_url($item['url']); ?>"><?php echo esc_html($item['label']); ?></a>
+                    <?php endforeach; ?>
+                </div>
+                <a class="scg-customer-nav-logout" href="<?php echo esc_url($logout_url); ?>">ログアウト</a>
+            </div>
+        </div>
+        <?php
+    }
 
     public static function ensure_default_options() {
         add_option('scg_gallery_columns_desktop', 5);
