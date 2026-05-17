@@ -42,6 +42,14 @@ class SCG_Dashboard {
                         <a class="button button-large" href="<?php echo esc_url(admin_url('admin.php?page=scg-news-list')); ?>">お知らせ一覧</a>
                     </div>
                 </section>
+
+                <section class="scg-panel">
+                    <h2>トップスライダー管理</h2>
+                    <p>トップページ用スライダー画像の追加・並び替え・差し替えを行います。</p>
+                    <div class="scg-actions">
+                        <a class="button button-primary button-large" href="<?php echo esc_url(admin_url('admin.php?page=scg-top-slider')); ?>">スライダー管理</a>
+                    </div>
+                </section>
             </div>
         </div>
         <?php

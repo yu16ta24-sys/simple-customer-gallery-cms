@@ -31,6 +31,7 @@ class SCG_Admin {
         add_submenu_page('scg-dashboard', 'ブログ一覧', 'ブログ一覧', 'edit_posts', 'scg-blog-list', ['SCG_Content_Manage', 'render_blog_list_page']);
         add_submenu_page('scg-dashboard', 'お知らせを書く', 'お知らせを書く', 'edit_posts', 'scg-news-add', ['SCG_Content_Manage', 'render_news_edit_page']);
         add_submenu_page('scg-dashboard', 'お知らせ一覧', 'お知らせ一覧', 'edit_posts', 'scg-news-list', ['SCG_Content_Manage', 'render_news_list_page']);
+        add_submenu_page('scg-dashboard', 'トップスライダー管理', 'トップスライダー管理', 'upload_files', 'scg-top-slider', ['SCG_Top_Slider', 'render_admin_page']);
 
         add_submenu_page(
             'scg-dashboard',
@@ -150,6 +151,7 @@ class SCG_Admin {
             'scg-blog-list' => ['label' => 'ブログ一覧', 'url' => admin_url('admin.php?page=scg-blog-list')],
             'scg-news-add' => ['label' => 'お知らせを書く', 'url' => admin_url('admin.php?page=scg-news-add')],
             'scg-news-list' => ['label' => 'お知らせ一覧', 'url' => admin_url('admin.php?page=scg-news-list')],
+            'scg-top-slider' => ['label' => 'スライダー管理', 'url' => admin_url('admin.php?page=scg-top-slider')],
         ];
         $logout_url = wp_logout_url(home_url('/login/'));
         ?>
@@ -259,6 +261,7 @@ class SCG_Admin {
 
         $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
         $is_gallery_manage = ($page === 'scg-photo-manage') || (strpos((string) $hook, 'scg-photo-manage') !== false);
+        $is_top_slider = ($page === 'scg-top-slider') || (strpos((string) $hook, 'scg-top-slider') !== false);
 
         if ($is_gallery_manage) {
             wp_enqueue_script('jquery-ui-sortable');
@@ -270,6 +273,26 @@ class SCG_Admin {
                 'max_files' => 10,
                 'max_file_size' => 20 * 1024 * 1024,
                 'max_file_size_label' => '20MB',
+            ]);
+        }
+
+        if ($is_top_slider) {
+            wp_enqueue_script('jquery-ui-sortable');
+            wp_enqueue_script('scg-admin-slider', SCG_CMS_URL . 'assets/js/admin-slider.js', ['jquery', 'jquery-ui-sortable'], SCG_CMS_VERSION, true);
+            wp_localize_script('scg-admin-slider', 'SCG_ADMIN_SLIDER', [
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('scg_top_slider_ajax'),
+                'max_items' => SCG_Top_Slider::MAX_ITEMS,
+                'max_file_size' => 20 * 1024 * 1024,
+                'messages' => [
+                    'delete_confirm' => 'この画像を削除します。よろしいですか？',
+                    'uploading' => 'アップロード中...',
+                    'processing' => '画像を処理中...',
+                    'complete' => 'アップロード完了',
+                    'error' => '処理に失敗しました。',
+                    'too_large' => '画像サイズが大きすぎます。20MB以内の画像を選択してください。',
+                    'max_reached' => '登録できる画像は最大12枚までです。',
+                ],
             ]);
         }
     }

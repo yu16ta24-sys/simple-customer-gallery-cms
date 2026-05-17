@@ -169,6 +169,7 @@ class SCG_Auth {
             'scg-blog-list',
             'scg-news-add',
             'scg-news-list',
+            'scg-top-slider',
         ];
 
         if ($pagenow === 'profile.php') {
