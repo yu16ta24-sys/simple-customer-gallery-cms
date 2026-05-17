@@ -24,6 +24,8 @@ class SCG_Front_Content {
                 'empty' => 'ブログ記事はまだありません。',
                 'back' => 'back to index',
                 'to_index' => 'to index',
+                'archive_param' => 'scg_blog_archive',
+                'default_limit' => 10,
             ],
             'news' => [
                 'type' => 'news',
@@ -33,7 +35,10 @@ class SCG_Front_Content {
                 'param' => 'scg_news',
                 'empty' => 'お知らせはまだありません。',
                 'back' => 'back to index',
-                'to_index' => 'to index',
+                'to_index' => '',
+                'archive_param' => '',
+                'default_limit' => 5,
+                'info_only' => true,
             ],
         ];
 
@@ -54,8 +59,10 @@ class SCG_Front_Content {
             return '';
         }
 
+        $default_limit = isset($config['default_limit']) ? intval($config['default_limit']) : 10;
+
         $atts = shortcode_atts([
-            'limit' => 10,
+            'limit' => $default_limit,
             'class' => '',
         ], $atts, 'scg_' . $type);
 
@@ -77,7 +84,11 @@ class SCG_Front_Content {
         ]);
 
         $initial_slug = isset($_GET[$config['param']]) ? sanitize_title(wp_unslash($_GET[$config['param']])) : '';
-        $initial_archive = isset($_GET['archivelist']) ? sanitize_key(wp_unslash($_GET['archivelist'])) : '';
+        $archive_param = !empty($config['archive_param']) ? $config['archive_param'] : '';
+        $initial_archive = $archive_param && isset($_GET[$archive_param]) ? sanitize_key(wp_unslash($_GET[$archive_param])) : '';
+        if (!$initial_archive && isset($_GET['archivelist'])) {
+            $initial_archive = sanitize_key(wp_unslash($_GET['archivelist']));
+        }
         $instance_id = 'scg-front-content-' . wp_generate_uuid4();
         $classes = trim('scg-front-content scg-front-content-' . $type . ' ' . sanitize_html_class($atts['class']));
 
@@ -87,6 +98,7 @@ class SCG_Front_Content {
              class="<?php echo esc_attr($classes); ?>"
              data-type="<?php echo esc_attr($type); ?>"
              data-param="<?php echo esc_attr($config['param']); ?>"
+             data-archive-param="<?php echo esc_attr(!empty($config['archive_param']) ? $config['archive_param'] : ''); ?>"
              data-initial-slug="<?php echo esc_attr($initial_slug); ?>"
              data-initial-archive="<?php echo esc_attr($initial_archive); ?>"
              data-limit="<?php echo esc_attr($limit); ?>">
@@ -109,7 +121,11 @@ class SCG_Front_Content {
             wp_send_json_error(['message' => '表示タイプが不正です。']);
         }
 
-        if ($view === 'detail') {
+        if (!empty($config['info_only'])) {
+            $html = self::render_news_info_html($config, $limit);
+            $resolved_view = 'top';
+            $slug = '';
+        } elseif ($view === 'detail') {
             $html = self::render_detail_html($config, $slug);
             $resolved_view = 'detail';
         } elseif ($view === 'index') {
@@ -128,6 +144,10 @@ class SCG_Front_Content {
     }
 
     private static function render_top_html($config, $limit = 10) {
+        if (!empty($config['info_only'])) {
+            return self::render_news_info_html($config, $limit);
+        }
+
         $query = self::query_active_posts($config, $limit);
 
         ob_start();
@@ -186,7 +206,7 @@ class SCG_Front_Content {
             <div class="scg-front-content-titletext"><?php echo esc_html($config['label']); ?></div>
             <div class="scg-front-content-titleline"></div>
             <?php if ($mode === 'index'): ?>
-                <a href="<?php echo esc_url(self::make_archive_url()); ?>" class="scg-front-content-navlink" data-scg-content-index="1">
+                <a href="<?php echo esc_url(self::make_archive_url($config)); ?>" class="scg-front-content-navlink" data-scg-content-index="1">
                     <?php echo esc_html($config['to_index']); ?> <span>▶</span>
                 </a>
             <?php elseif ($mode === 'back-top'): ?>
@@ -194,12 +214,70 @@ class SCG_Front_Content {
                     <span>◀</span> back to <?php echo esc_html($config['label']); ?>
                 </a>
             <?php elseif ($mode === 'back-index'): ?>
-                <a href="<?php echo esc_url(self::make_archive_url()); ?>" class="scg-front-content-navlink" data-scg-content-back="1">
+                <a href="<?php echo esc_url(self::make_archive_url($config)); ?>" class="scg-front-content-navlink" data-scg-content-back="1">
                     <span>◀</span> back to index
                 </a>
             <?php endif; ?>
         </div>
         <?php
+    }
+
+    private static function render_news_info_html($config, $limit = 5) {
+        $query = self::query_active_posts($config, $limit);
+
+        ob_start();
+        ?>
+        <section class="scg-front-content-shell scg-front-news-info">
+            <div class="scg-front-news-titlebar">information</div>
+            <?php if ($query->have_posts()): ?>
+                <div class="scg-front-news-list">
+                    <?php foreach ($query->posts as $post): ?>
+                        <?php self::render_news_info_item($post); ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <p class="scg-front-content-empty"><?php echo esc_html($config['empty']); ?></p>
+            <?php endif; ?>
+        </section>
+        <?php
+        wp_reset_postdata();
+        return ob_get_clean();
+    }
+
+    private static function render_news_info_item($post) {
+        $date = self::format_news_date($post);
+        $text = $post->post_title ?: 'お知らせを更新しました。';
+        $link_url = get_post_meta($post->ID, '_scg_news_link_url', true);
+        $link_text = get_post_meta($post->ID, '_scg_news_link_text', true);
+        ?>
+        <div class="scg-front-news-row">
+            <time><?php echo esc_html($date); ?></time>
+            <span class="scg-front-news-text"><?php echo self::render_news_linked_text($text, $link_url, $link_text); ?></span>
+        </div>
+        <?php
+    }
+
+    private static function render_news_linked_text($text, $link_url, $link_text = '') {
+        $text = (string) $text;
+        $link_url = (string) $link_url;
+        $link_text = (string) $link_text;
+        if ($link_url === '') {
+            return esc_html($text);
+        }
+
+        if ($link_text !== '' && mb_strpos($text, $link_text) !== false) {
+            $parts = explode($link_text, $text, 2);
+            return esc_html($parts[0]) . '<a href="' . esc_url($link_url) . '">' . esc_html($link_text) . '</a>' . esc_html($parts[1]);
+        }
+
+        return '<a href="' . esc_url($link_url) . '">' . esc_html($text) . '</a>';
+    }
+
+    private static function format_news_date($post) {
+        $month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        $month = intval(get_the_date('n', $post));
+        $day = get_the_date('d', $post);
+        return $day . '. ' . ($month_names[$month - 1] ?? get_the_date('M', $post));
     }
 
     private static function render_top_item($post, $config) {
@@ -364,8 +442,9 @@ class SCG_Front_Content {
         return add_query_arg($config['param'], $slug, self::current_url_without_content_params());
     }
 
-    private static function make_archive_url() {
-        return add_query_arg('archivelist', 'headline', self::current_url_without_content_params());
+    private static function make_archive_url($config) {
+        $archive_param = !empty($config['archive_param']) ? $config['archive_param'] : 'scg_archive';
+        return add_query_arg($archive_param, 'headline', self::current_url_without_content_params());
     }
 
     private static function make_top_url() {
@@ -377,6 +456,6 @@ class SCG_Front_Content {
         $host = isset($_SERVER['HTTP_HOST']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_HOST'])) : '';
         $uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
         $url = $scheme . $host . $uri;
-        return remove_query_arg(['scg_blog', 'scg_news', 'archivelist'], $url);
+        return remove_query_arg(['scg_blog', 'scg_news', 'scg_blog_archive', 'scg_news_archive', 'archivelist'], $url);
     }
 }

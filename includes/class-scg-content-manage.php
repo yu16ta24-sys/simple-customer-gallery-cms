@@ -88,6 +88,8 @@ class SCG_Content_Manage {
             <h1><?php echo esc_html($is_edit ? $config['label'] . 'を編集' : $config['write_label']); ?></h1>
             <?php self::render_notice($message, $error); ?>
 
+            <?php if ($type === 'news') { self::render_news_notice_form($config, $content_id, $post, $post_status, $is_edit); echo '</div>'; return; } ?>
+
             <form class="scg-content-form scg-card" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
                 <?php wp_nonce_field('scg_save_content_' . $type, 'scg_nonce'); ?>
                 <input type="hidden" name="action" value="scg_save_content">
@@ -380,6 +382,246 @@ class SCG_Content_Manage {
         <?php
     }
 
+    private static function render_news_notice_form($config, $content_id, $post, $post_status, $is_edit) {
+        $news_type = $post ? get_post_meta($content_id, '_scg_news_type', true) : 'blog';
+        $news_type = in_array($news_type, ['blog', 'gallery', 'custom'], true) ? $news_type : 'blog';
+        $display_date = $post ? get_the_date('Y-m-d', $post) : current_time('Y-m-d');
+        $custom_text = $post ? $post->post_title : '';
+        $link_url = $post ? get_post_meta($content_id, '_scg_news_link_url', true) : '';
+        $gallery_parent_id = $post ? intval(get_post_meta($content_id, '_scg_news_gallery_parent', true)) : 0;
+        $gallery_child_id = $post ? intval(get_post_meta($content_id, '_scg_news_gallery_child', true)) : 0;
+        $legacy_gallery_term_id = $post ? intval(get_post_meta($content_id, '_scg_news_gallery_term', true)) : 0;
+        if (!$gallery_child_id && $legacy_gallery_term_id) {
+            $legacy_term = get_term($legacy_gallery_term_id, 'scg_gallery_category');
+            if ($legacy_term && !is_wp_error($legacy_term)) {
+                if (intval($legacy_term->parent) > 0) {
+                    $gallery_child_id = intval($legacy_term->term_id);
+                    if (!$gallery_parent_id) {
+                        $gallery_parent_id = intval($legacy_term->parent);
+                    }
+                } elseif (!$gallery_parent_id) {
+                    $gallery_parent_id = intval($legacy_term->term_id);
+                }
+            }
+        }
+        if ($gallery_child_id && !$gallery_parent_id) {
+            $child_term = get_term($gallery_child_id, 'scg_gallery_category');
+            if ($child_term && !is_wp_error($child_term)) {
+                $gallery_parent_id = intval($child_term->parent);
+            }
+        }
+        $gallery_count = $post ? intval(get_post_meta($content_id, '_scg_news_count', true)) : 1;
+        if ($gallery_count <= 0) {
+            $gallery_count = 1;
+        }
+        $terms = get_terms([
+            'taxonomy' => 'scg_gallery_category',
+            'hide_empty' => false,
+            'orderby' => 'name',
+            'order' => 'ASC',
+        ]);
+        $parent_terms = [];
+        $children_by_parent = [];
+        if (!is_wp_error($terms)) {
+            foreach ($terms as $term) {
+                if (intval($term->parent) === 0) {
+                    $parent_terms[] = $term;
+                } else {
+                    $parent_id = intval($term->parent);
+                    if (!isset($children_by_parent[$parent_id])) {
+                        $children_by_parent[$parent_id] = [];
+                    }
+                    $children_by_parent[$parent_id][] = $term;
+                }
+            }
+        }
+        $children_map = [];
+        foreach ($children_by_parent as $parent_id => $children) {
+            $children_map[$parent_id] = array_map(function ($term) {
+                return [
+                    'id' => intval($term->term_id),
+                    'name' => $term->name,
+                    'slug' => $term->slug,
+                ];
+            }, $children);
+        }
+        ?>
+            <form class="scg-content-form scg-news-form scg-card" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('scg_save_content_news', 'scg_nonce'); ?>
+                <input type="hidden" name="action" value="scg_save_content">
+                <input type="hidden" name="scg_type" value="news">
+                <input type="hidden" name="content_id" value="<?php echo esc_attr($content_id); ?>">
+
+                <label class="scg-label" for="scg-news-date">表示日</label>
+                <input type="date" id="scg-news-date" name="scg_news_date" class="scg-content-title" value="<?php echo esc_attr($display_date); ?>" required>
+
+                <div class="scg-content-status-row">
+                    <span class="scg-label scg-inline-label">公開状態</span>
+                    <label><input type="radio" name="scg_post_status" value="publish" <?php checked($post_status, 'publish'); ?>> 公開</label>
+                    <label><input type="radio" name="scg_post_status" value="draft" <?php checked($post_status, 'draft'); ?>> 下書き</label>
+                </div>
+
+                <div class="scg-news-type-selector">
+                    <span class="scg-label scg-inline-label">お知らせタイプ</span>
+                    <label><input type="radio" name="scg_news_type" value="blog" <?php checked($news_type, 'blog'); ?>> blog更新</label>
+                    <label><input type="radio" name="scg_news_type" value="gallery" <?php checked($news_type, 'gallery'); ?>> ギャラリー追加</label>
+                    <label><input type="radio" name="scg_news_type" value="custom" <?php checked($news_type, 'custom'); ?>> 自由入力</label>
+                </div>
+
+                <div class="scg-news-panel" data-news-panel="blog">
+                    <h2>blog更新</h2>
+                    <p class="scg-help">保存すると「blog を更新しました。」を自動生成します。</p>
+                    <label class="scg-label" for="scg-news-blog-url">リンク先URL</label>
+                    <input type="text" id="scg-news-blog-url" name="scg_news_blog_url" class="regular-text" value="<?php echo esc_attr($news_type === 'blog' && $link_url ? $link_url : home_url('/blog/')); ?>">
+                </div>
+
+                <div class="scg-news-panel" data-news-panel="gallery">
+                    <h2>ギャラリー写真追加</h2>
+                    <p class="scg-help">カテゴリと枚数から「Lake - Ezu に1カットアップ」のような文言を自動生成します。</p>
+                    <label class="scg-label" for="scg-news-gallery-parent">親カテゴリー</label>
+                    <select id="scg-news-gallery-parent" name="scg_news_gallery_parent" class="regular-text">
+                        <option value="0">親カテゴリーを選択</option>
+                        <?php foreach ($parent_terms as $term): ?>
+                            <option value="<?php echo esc_attr($term->term_id); ?>" <?php selected($gallery_parent_id, $term->term_id); ?>>
+                                <?php echo esc_html($term->name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <label class="scg-label" for="scg-news-gallery-child">子カテゴリー</label>
+                    <select id="scg-news-gallery-child" name="scg_news_gallery_child" class="regular-text" <?php disabled(!$gallery_parent_id); ?>>
+                        <option value="0">子カテゴリーを選択</option>
+                        <?php if ($gallery_parent_id && isset($children_by_parent[$gallery_parent_id])): ?>
+                            <?php foreach ($children_by_parent[$gallery_parent_id] as $term): ?>
+                                <option value="<?php echo esc_attr($term->term_id); ?>" <?php selected($gallery_child_id, $term->term_id); ?>>
+                                    <?php echo esc_html($term->name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+
+                    <label class="scg-label" for="scg-news-gallery-count">追加枚数</label>
+                    <input type="number" id="scg-news-gallery-count" name="scg_news_count" min="1" max="999" value="<?php echo esc_attr($gallery_count); ?>" class="small-text"> カット
+
+                    <label class="scg-label" for="scg-news-gallery-base-url">ギャラリーページURL</label>
+                    <input type="text" id="scg-news-gallery-base-url" name="scg_news_gallery_base_url" class="regular-text" value="<?php echo esc_attr(home_url('/gallery/')); ?>">
+                </div>
+
+                <div class="scg-news-panel" data-news-panel="custom">
+                    <h2>自由入力</h2>
+                    <label class="scg-label" for="scg-news-custom-text">表示文</label>
+                    <input type="text" id="scg-news-custom-text" name="scg_news_custom_text" class="scg-content-title" value="<?php echo esc_attr($news_type === 'custom' ? $custom_text : ''); ?>" placeholder="表示したいお知らせ文を入力">
+
+                    <label class="scg-label" for="scg-news-custom-url">リンク先URL（任意）</label>
+                    <input type="text" id="scg-news-custom-url" name="scg_news_custom_url" class="regular-text" value="<?php echo esc_attr($news_type === 'custom' ? $link_url : ''); ?>" placeholder="https://... または /page/">
+
+                    <label class="scg-label" for="scg-news-custom-link-text">リンク文字（任意）</label>
+                    <input type="text" id="scg-news-custom-link-text" name="scg_news_custom_link_text" class="regular-text" value="<?php echo esc_attr($post ? get_post_meta($content_id, '_scg_news_link_text', true) : ''); ?>" placeholder="文中の一部だけリンクにする場合に入力">
+                </div>
+
+                <div class="scg-news-preview-box">
+                    <span class="scg-label">表示イメージ</span>
+                    <p class="scg-news-preview-text">保存後、information欄に表示されます。</p>
+                </div>
+
+                <div class="scg-content-actions">
+                    <button type="submit" class="button button-primary button-large"><?php echo esc_html($is_edit ? '更新する' : '保存する'); ?></button>
+                    <a class="button button-large" href="<?php echo esc_url(admin_url('admin.php?page=' . $config['list_page'])); ?>"><?php echo esc_html($config['list_label']); ?>へ戻る</a>
+                </div>
+            </form>
+            <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var form = document.querySelector('.scg-news-form');
+                if (!form) return;
+                var radios = Array.prototype.slice.call(form.querySelectorAll('input[name="scg_news_type"]'));
+                var panels = Array.prototype.slice.call(form.querySelectorAll('.scg-news-panel'));
+                var preview = form.querySelector('.scg-news-preview-text');
+                var childrenMap = <?php echo wp_json_encode($children_map, JSON_UNESCAPED_UNICODE); ?> || {};
+                var parentSelect = form.querySelector('[name="scg_news_gallery_parent"]');
+                var childSelect = form.querySelector('[name="scg_news_gallery_child"]');
+                var initialChildId = '<?php echo esc_js((string) $gallery_child_id); ?>';
+
+                function currentType() {
+                    var checked = form.querySelector('input[name="scg_news_type"]:checked');
+                    return checked ? checked.value : 'blog';
+                }
+
+                function updatePanels() {
+                    var type = currentType();
+                    panels.forEach(function (panel) {
+                        panel.style.display = panel.getAttribute('data-news-panel') === type ? 'block' : 'none';
+                    });
+                    updatePreview();
+                }
+
+                function updateChildOptions(keepSelected) {
+                    if (!parentSelect || !childSelect) return;
+                    var parentId = parentSelect.value || '0';
+                    var children = childrenMap[parentId] || [];
+                    var currentValue = keepSelected ? childSelect.value : initialChildId;
+                    childSelect.innerHTML = '<option value="0">子カテゴリーを選択</option>';
+                    children.forEach(function (child) {
+                        var option = document.createElement('option');
+                        option.value = String(child.id);
+                        option.textContent = child.name;
+                        if (String(child.id) === String(currentValue)) {
+                            option.selected = true;
+                        }
+                        childSelect.appendChild(option);
+                    });
+                    childSelect.disabled = !parentId || parentId === '0' || children.length === 0;
+                    if (!keepSelected) {
+                        initialChildId = '';
+                    }
+                }
+
+                function selectedOptionText(select, fallback) {
+                    if (!select || !select.options || select.selectedIndex < 0) return fallback;
+                    var option = select.options[select.selectedIndex];
+                    return option && option.value !== '0' ? option.text : fallback;
+                }
+
+                function updatePreview() {
+                    if (!preview) return;
+                    var type = currentType();
+                    if (type === 'blog') {
+                        preview.textContent = 'blog を更新しました。';
+                        return;
+                    }
+                    if (type === 'gallery') {
+                        var count = parseInt((form.querySelector('[name="scg_news_count"]') || {}).value || '1', 10);
+                        var childLabel = selectedOptionText(childSelect, '');
+                        var parentLabel = selectedOptionText(parentSelect, 'カテゴリ');
+                        var label = childLabel || parentLabel || 'カテゴリ';
+                        preview.textContent = label + ' に' + (count || 1) + 'カットアップ';
+                        return;
+                    }
+                    var text = (form.querySelector('[name="scg_news_custom_text"]') || {}).value || '自由入力のお知らせ';
+                    preview.textContent = text;
+                }
+
+                radios.forEach(function (radio) { radio.addEventListener('change', updatePanels); });
+                if (parentSelect) {
+                    parentSelect.addEventListener('change', function () {
+                        initialChildId = '';
+                        updateChildOptions(true);
+                        updatePreview();
+                    });
+                }
+                ['input', 'change'].forEach(function (eventName) {
+                    form.addEventListener(eventName, function (event) {
+                        if (event.target && event.target.closest('.scg-news-panel')) {
+                            updatePreview();
+                        }
+                    });
+                });
+                updateChildOptions(false);
+                updatePanels();
+            });
+            </script>
+        <?php
+    }
+
     private static function render_list_page($type) {
         if (!current_user_can('edit_posts')) {
             wp_die('権限がありません');
@@ -517,6 +759,11 @@ class SCG_Content_Manage {
         $post_status = isset($_POST['scg_post_status']) ? sanitize_key($_POST['scg_post_status']) : 'publish';
         $post_status = in_array($post_status, ['publish', 'draft'], true) ? $post_status : 'publish';
 
+        if ($type === 'news') {
+            self::handle_save_news($config, $content_id, $post_status);
+            return;
+        }
+
         if ($title === '') {
             $title = '無題';
         }
@@ -555,6 +802,123 @@ class SCG_Content_Manage {
         $image_error = self::handle_images($content_id);
         if ($image_error) {
             self::redirect_to_edit($config, $content_id, '', $image_error);
+        }
+
+        self::redirect_to_edit($config, $content_id, 'saved', '');
+    }
+
+    private static function handle_save_news($config, $content_id, $post_status) {
+        $news_type = isset($_POST['scg_news_type']) ? sanitize_key(wp_unslash($_POST['scg_news_type'])) : 'blog';
+        $news_type = in_array($news_type, ['blog', 'gallery', 'custom'], true) ? $news_type : 'blog';
+        $date = isset($_POST['scg_news_date']) ? sanitize_text_field(wp_unslash($_POST['scg_news_date'])) : current_time('Y-m-d');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $date = current_time('Y-m-d');
+        }
+        $time = current_time('H:i:s');
+        if ($content_id) {
+            $existing = get_post($content_id);
+            if ($existing && !empty($existing->post_date)) {
+                $time = mysql2date('H:i:s', $existing->post_date, false);
+            }
+        }
+        $post_date = $date . ' ' . $time;
+        $title = '';
+        $link_url = '';
+        $link_text = '';
+        $gallery_parent_id = 0;
+        $gallery_child_id = 0;
+        $gallery_term_id = 0;
+        $count = 0;
+
+        if ($news_type === 'blog') {
+            $title = 'blog を更新しました。';
+            $link_text = 'blog';
+            $link_url = isset($_POST['scg_news_blog_url']) ? esc_url_raw(wp_unslash($_POST['scg_news_blog_url'])) : home_url('/blog/');
+            if (!$link_url) {
+                $link_url = home_url('/blog/');
+            }
+        } elseif ($news_type === 'gallery') {
+            $gallery_parent_id = isset($_POST['scg_news_gallery_parent']) ? absint($_POST['scg_news_gallery_parent']) : 0;
+            $gallery_child_id = isset($_POST['scg_news_gallery_child']) ? absint($_POST['scg_news_gallery_child']) : 0;
+            $count = isset($_POST['scg_news_count']) ? max(1, absint($_POST['scg_news_count'])) : 1;
+
+            $parent_term = $gallery_parent_id ? get_term($gallery_parent_id, 'scg_gallery_category') : null;
+            if (!$parent_term || is_wp_error($parent_term) || intval($parent_term->parent) !== 0) {
+                self::safe_redirect_with_error('news', 'invalid');
+            }
+
+            $display_term = $parent_term;
+            $child_term = null;
+            if ($gallery_child_id) {
+                $child_term = get_term($gallery_child_id, 'scg_gallery_category');
+                if (!$child_term || is_wp_error($child_term) || intval($child_term->parent) !== intval($parent_term->term_id)) {
+                    self::safe_redirect_with_error('news', 'invalid');
+                }
+                $display_term = $child_term;
+            }
+
+            $gallery_term_id = intval($display_term->term_id);
+            $title = sprintf('%s に%dカットアップ', $display_term->name, $count);
+            $link_text = $display_term->name;
+            $base_url = isset($_POST['scg_news_gallery_base_url']) ? esc_url_raw(wp_unslash($_POST['scg_news_gallery_base_url'])) : home_url('/gallery/');
+            if (!$base_url) {
+                $base_url = home_url('/gallery/');
+            }
+            $args = ['scg_main' => $parent_term->slug];
+            if ($child_term) {
+                $args['scg_sub'] = $child_term->slug;
+            }
+            $link_url = add_query_arg($args, $base_url);
+        } else {
+            $title = isset($_POST['scg_news_custom_text']) ? sanitize_text_field(wp_unslash($_POST['scg_news_custom_text'])) : '';
+            if ($title === '') {
+                $title = 'お知らせを更新しました。';
+            }
+            $link_url = isset($_POST['scg_news_custom_url']) ? esc_url_raw(wp_unslash($_POST['scg_news_custom_url'])) : '';
+            $link_text = isset($_POST['scg_news_custom_link_text']) ? sanitize_text_field(wp_unslash($_POST['scg_news_custom_link_text'])) : '';
+        }
+
+        $postarr = [
+            'post_type' => $config['post_type'],
+            'post_title' => $title,
+            'post_content' => '',
+            'post_status' => $post_status,
+            'post_date' => $post_date,
+            'post_date_gmt' => get_gmt_from_date($post_date),
+        ];
+
+        if ($content_id) {
+            $existing = get_post($content_id);
+            if (!$existing || $existing->post_type !== $config['post_type']) {
+                self::safe_redirect_with_error('news', 'invalid');
+            }
+            $postarr['ID'] = $content_id;
+            $result = wp_update_post($postarr, true);
+        } else {
+            $postarr['post_author'] = get_current_user_id();
+            $result = wp_insert_post($postarr, true);
+        }
+
+        if (is_wp_error($result)) {
+            self::safe_redirect_with_error('news', 'invalid');
+        }
+
+        $content_id = intval($result);
+        update_post_meta($content_id, '_scg_status', 'active');
+        update_post_meta($content_id, '_scg_news_type', $news_type);
+        update_post_meta($content_id, '_scg_news_link_url', $link_url);
+        update_post_meta($content_id, '_scg_news_link_text', $link_text);
+        update_post_meta($content_id, '_scg_news_gallery_parent', $gallery_parent_id);
+        update_post_meta($content_id, '_scg_news_gallery_child', $gallery_child_id);
+        update_post_meta($content_id, '_scg_news_gallery_term', $gallery_term_id);
+        update_post_meta($content_id, '_scg_news_count', $count);
+
+        for ($i = 1; $i <= self::MAX_IMAGES; $i++) {
+            $image_id = intval(get_post_meta($content_id, '_scg_image_' . $i, true));
+            if ($image_id) {
+                wp_delete_attachment($image_id, true);
+            }
+            delete_post_meta($content_id, '_scg_image_' . $i);
         }
 
         self::redirect_to_edit($config, $content_id, 'saved', '');

@@ -6,6 +6,7 @@
         this.$root = $(root);
         this.type = this.$root.data('type');
         this.param = this.$root.data('param');
+        this.archiveParam = this.$root.data('archive-param') || '';
         this.limit = parseInt(this.$root.data('limit'), 10) || 10;
         this.initialSlug = this.$root.data('initial-slug') || '';
         this.initialArchive = this.$root.data('initial-archive') || '';
@@ -21,7 +22,9 @@
         var state = this.getUrlState();
         this.bindEvents();
 
-        if (state.view === 'detail' && state.slug) {
+        if (this.type === 'news') {
+            this.loadTop(true);
+        } else if (state.view === 'detail' && state.slug) {
             this.loadDetail(state.slug, true);
         } else if (state.view === 'index') {
             this.loadIndex(true);
@@ -101,7 +104,9 @@
 
         $(window).on('popstate.scgFrontContent', function () {
             var state = self.getUrlState();
-            if (state.view === 'detail' && state.slug) {
+            if (this.type === 'news') {
+            this.loadTop(true);
+        } else if (state.view === 'detail' && state.slug) {
                 self.loadDetail(state.slug, true);
             } else if (state.view === 'index') {
                 self.loadIndex(true);
@@ -114,7 +119,10 @@
     ContentApp.prototype.getUrlState = function () {
         var params = new URLSearchParams(window.location.search);
         var slug = params.get(this.param) || '';
-        var archive = params.get('archivelist') || '';
+        var archive = this.archiveParam ? (params.get(this.archiveParam) || '') : '';
+        if (!archive) {
+            archive = params.get('archivelist') || '';
+        }
 
         if (slug) {
             return { view: 'detail', slug: slug };
@@ -135,10 +143,12 @@
         var url = new URL(window.location.href);
         url.searchParams.delete('scg_blog');
         url.searchParams.delete('scg_news');
+        url.searchParams.delete('scg_blog_archive');
+        url.searchParams.delete('scg_news_archive');
         url.searchParams.delete('archivelist');
 
         if (view === 'index') {
-            url.searchParams.set('archivelist', 'headline');
+            url.searchParams.set(this.archiveParam || 'scg_archive', 'headline');
         } else if (view === 'detail' && slug) {
             url.searchParams.set(this.param, slug);
         }
