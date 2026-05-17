@@ -5,6 +5,7 @@ if (!defined('ABSPATH')) {
 
 class SCG_Admin {
     public static function init() {
+        self::ensure_default_options();
         add_action('admin_menu', [__CLASS__, 'register_menu']);
         add_action('admin_menu', [__CLASS__, 'restrict_menu_for_customer'], 999);
         add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_admin_assets']);
@@ -35,6 +36,15 @@ class SCG_Admin {
             'manage_options',
             'edit-tags.php?taxonomy=scg_gallery_category&post_type=scg_photo'
         );
+
+        add_submenu_page(
+            'scg-dashboard',
+            'ギャラリー表示設定',
+            'ギャラリー表示設定',
+            'manage_options',
+            'scg-gallery-display-settings',
+            [__CLASS__, 'render_gallery_display_settings']
+        );
     }
 
     public static function restrict_menu_for_customer() {
@@ -60,6 +70,94 @@ class SCG_Admin {
         remove_menu_page('users.php');
         remove_menu_page('tools.php');
         remove_menu_page('options-general.php');
+    }
+
+
+    public static function ensure_default_options() {
+        add_option('scg_gallery_columns_desktop', 5);
+        add_option('scg_gallery_columns_tablet', 4);
+        add_option('scg_gallery_columns_mobile', 3);
+    }
+
+    public static function get_gallery_column_settings() {
+        return [
+            'desktop' => max(1, min(8, (int) get_option('scg_gallery_columns_desktop', 5))),
+            'tablet' => max(1, min(6, (int) get_option('scg_gallery_columns_tablet', 4))),
+            'mobile' => max(1, min(4, (int) get_option('scg_gallery_columns_mobile', 3))),
+        ];
+    }
+
+    public static function render_gallery_display_settings() {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('この設定を変更する権限がありません。', 'simple-customer-gallery-cms'));
+        }
+
+        if (isset($_POST['scg_gallery_display_settings_submit'])) {
+            check_admin_referer('scg_save_gallery_display_settings');
+
+            $desktop = isset($_POST['scg_gallery_columns_desktop']) ? (int) $_POST['scg_gallery_columns_desktop'] : 5;
+            $tablet = isset($_POST['scg_gallery_columns_tablet']) ? (int) $_POST['scg_gallery_columns_tablet'] : 4;
+            $mobile = isset($_POST['scg_gallery_columns_mobile']) ? (int) $_POST['scg_gallery_columns_mobile'] : 3;
+
+            update_option('scg_gallery_columns_desktop', max(1, min(8, $desktop)));
+            update_option('scg_gallery_columns_tablet', max(1, min(6, $tablet)));
+            update_option('scg_gallery_columns_mobile', max(1, min(4, $mobile)));
+
+            echo '<div class="notice notice-success is-dismissible"><p>ギャラリー表示設定を保存しました。</p></div>';
+        }
+
+        $settings = self::get_gallery_column_settings();
+        ?>
+        <div class="wrap scg-wrap scg-settings-wrap">
+            <h1>ギャラリー表示設定</h1>
+            <p class="scg-lead">フロントギャラリーの画像グリッド列数を、表示端末ごとに調整できます。</p>
+
+            <form method="post" class="scg-settings-form">
+                <?php wp_nonce_field('scg_save_gallery_display_settings'); ?>
+
+                <section class="scg-panel scg-settings-panel">
+                    <h2>表示列数</h2>
+                    <p>設定値はショートコード <code>[scg_gallery]</code> の表示に反映されます。</p>
+
+                    <?php self::render_column_slider('PC表示', 'scg_gallery_columns_desktop', $settings['desktop'], 1, 8, '1024px以上の画面で使う列数です。'); ?>
+                    <?php self::render_column_slider('タブレット表示', 'scg_gallery_columns_tablet', $settings['tablet'], 1, 6, '768px〜1023pxの画面で使う列数です。'); ?>
+                    <?php self::render_column_slider('スマホ表示', 'scg_gallery_columns_mobile', $settings['mobile'], 1, 4, '767px以下の画面で使う列数です。'); ?>
+
+                    <div class="scg-settings-footer">
+                        <button type="submit" name="scg_gallery_display_settings_submit" value="1" class="button button-primary button-large">設定を保存</button>
+                    </div>
+                </section>
+            </form>
+        </div>
+
+        <script>
+        (function() {
+            const sliders = document.querySelectorAll('.scg-range-input');
+            sliders.forEach(function(slider) {
+                const output = document.querySelector('[data-scg-range-output="' + slider.name + '"]');
+                if (!output) return;
+                const sync = function() { output.textContent = slider.value + '列'; };
+                slider.addEventListener('input', sync);
+                sync();
+            });
+        })();
+        </script>
+        <?php
+    }
+
+    private static function render_column_slider($label, $name, $value, $min, $max, $description) {
+        ?>
+        <div class="scg-setting-row">
+            <div class="scg-setting-label">
+                <strong><?php echo esc_html($label); ?></strong>
+                <span><?php echo esc_html($description); ?></span>
+            </div>
+            <div class="scg-setting-control">
+                <input class="scg-range-input" type="range" name="<?php echo esc_attr($name); ?>" min="<?php echo esc_attr($min); ?>" max="<?php echo esc_attr($max); ?>" value="<?php echo esc_attr($value); ?>">
+                <output class="scg-range-output" data-scg-range-output="<?php echo esc_attr($name); ?>"><?php echo esc_html($value); ?>列</output>
+            </div>
+        </div>
+        <?php
     }
 
     public static function enqueue_admin_assets($hook) {

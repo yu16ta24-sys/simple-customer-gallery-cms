@@ -20,6 +20,7 @@ class SCG_Dashboard {
                         <a class="button button-primary button-large" href="<?php echo esc_url(admin_url('admin.php?page=scg-photo-manage')); ?>">ギャラリー管理</a>
                         <?php if (current_user_can('manage_options')): ?>
                             <a class="button button-large" href="<?php echo esc_url(admin_url('edit-tags.php?taxonomy=scg_gallery_category&post_type=scg_photo')); ?>">カテゴリを管理する</a>
+                            <a class="button button-large" href="<?php echo esc_url(admin_url('admin.php?page=scg-gallery-display-settings')); ?>">表示設定</a>
                         <?php endif; ?>
                     </div>
                 </section>

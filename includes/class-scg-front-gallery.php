@@ -33,11 +33,21 @@ class SCG_Front_Gallery {
         $initial_sub = isset($_GET['scg_sub']) ? sanitize_title(wp_unslash($_GET['scg_sub'])) : '';
         $instance_id = 'scg-front-gallery-' . wp_generate_uuid4();
         $classes = trim('scg-front-gallery ' . sanitize_html_class($atts['class']));
+        $desktop_columns = max(1, min(8, (int) get_option('scg_gallery_columns_desktop', 5)));
+        $tablet_columns = max(1, min(6, (int) get_option('scg_gallery_columns_tablet', 4)));
+        $mobile_columns = max(1, min(4, (int) get_option('scg_gallery_columns_mobile', 3)));
+        $style = sprintf(
+            '--scg-gallery-columns-desktop:%d;--scg-gallery-columns-tablet:%d;--scg-gallery-columns-mobile:%d;',
+            $desktop_columns,
+            $tablet_columns,
+            $mobile_columns
+        );
 
         ob_start();
         ?>
         <div id="<?php echo esc_attr($instance_id); ?>"
              class="<?php echo esc_attr($classes); ?>"
+             style="<?php echo esc_attr($style); ?>"
              data-initial-main="<?php echo esc_attr($initial_main); ?>"
              data-initial-sub="<?php echo esc_attr($initial_sub); ?>">
             <div class="scg-front-loading">画像ギャラリーを準備しています...</div>
