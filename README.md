@@ -1,11 +1,89 @@
-# Simple Customer Gallery CMS - v1.2.5
+# v1.3.3 修正内容
+
+- ブログ/お知らせの右カラム添付画像をクリック拡大できるように修正
+- 画像拡大モーダルを追加
+  - 背景クリックで閉じる
+  - 右上×で閉じる
+  - 前後送り対応
+  - Esc / ← → キー対応
+- 最新10件表示では記事タイトルから単一表示へ遷移しないように修正
+- 単一表示への導線は過去記事一覧のみ
+- Version / README を `1.3.3` に更新
+
+---
+
+# Simple Customer Gallery CMS
+
+## v1.3.2 修正内容
+
+- ブログ/お知らせの単一記事表示に「◀ back to index」を追加
+- 「◀ back to index」クリックで `?archivelist=headline` の過去記事一覧へ戻るように修正
+- ブラウザ履歴との整合性を維持
+
+# v1.3.2 / Phase5 ブログ・お知らせフロント表示改善
+
+## 今回の修正
+- `[scg_blog]` / `[scg_news]` の初期表示を最新10件・本文全文表示に変更
+- `?archivelist=headline` で過去記事一覧（No / 投稿日 / タイトル）を表示
+- 記事詳細は `?scg_blog=slug` / `?scg_news=slug` で表示
+- 「to index ▶」と「◀ back to blog/news」を追加
+- 既存HTMLサイト風のブログ表示に近づけるCSSへ調整
+
+---
+
+# Simple Customer Gallery CMS - v1.3.1
 
 ## 現在のバージョンとフェーズ名
 
-- Version: 1.2.7
-- Phase: v1.2.5 フロントギャラリーモーダル閉じるボタン位置調整
-- 位置づけ: v1.2.0で追加したフロントギャラリー表示の正方形グリッド・モーダル操作UIを微調整した安定化フェーズ
+- Version: 1.3.0
+- Phase: v1.3.0 ブログ/お知らせフロント表示 最小実装
+- 位置づけ: 管理画面で作成したブログ/お知らせを、固定ページ上でショートコード表示できるようにしたフロント拡張フェーズ
 
+---
+
+## v1.3.0 更新内容
+
+- ブログ/お知らせのフロント表示用クラス `SCG_Front_Content` を追加
+- フロント用ショートコードを追加
+  - `[scg_blog]`
+  - `[scg_news]`
+  - `[scg_blog_list]`
+  - `[scg_news_list]`
+- フロント専用CSS `assets/css/front-content.css` を追加
+- フロント専用JS `assets/js/front-content.js` を追加
+- ブログ/お知らせの一覧表示を実装
+  - 投稿日
+  - タイトル
+  - 本文抜粋
+  - 1枚目の添付画像サムネイル
+- ブログ/お知らせの詳細表示を実装
+  - 投稿日
+  - タイトル
+  - 本文
+  - 添付画像1〜3枚
+- SPA型の表示切り替えに対応
+  - 一覧 → 詳細
+  - 詳細 → 一覧へ戻る
+  - ページ全体のリロードなし
+- URL状態管理に対応
+  - ブログ詳細: `?scg_blog=記事slug`
+  - お知らせ詳細: `?scg_news=記事slug`
+- `history.pushState` / `popstate` に対応し、ブラウザ戻る/進むで表示状態を復元
+- フロント側には `_scg_status = active` かつ `publish` の記事のみ表示
+- ギャラリー用URLパラメータ `scg_main/scg_sub` とは独立した設計
+- Version / README を `1.3.0` に更新
+
+---
+
+## 【Geminiへのレビュー依頼事項】
+
+- `SCG_Front_Content` の設計が、既存の `SCG_Front_Gallery` と一貫しているか
+- `[scg_blog]` / `[scg_news]` のSPA型表示設計が適切か
+- `?scg_blog=slug` / `?scg_news=slug` のURL状態管理に不整合がないか
+- Ajaxエンドポイント `scg_front_get_content` のnonce・サニタイズ・表示条件が安全か
+- フロントCSS/JSがテーマやギャラリー側と干渉しないか
+- ブログ/お知らせの詳細表示における画像1〜3枚の表示設計が妥当か
+- 次フェーズの「ギャラリー表示設定」「メール投稿機能」「サイト全体デザイン寄せ」に進む前に直すべき点がないか
 
 ---
 
