@@ -76,17 +76,11 @@ class SCG_Gallery_Upload {
 
         $files = $_FILES['photos'];
         $file_count = count($files['name']);
-        $max_file_size = 20 * 1024 * 1024;
 
         if ($file_count > 10) {
             wp_send_json_error(['message' => '画像は最大10枚までです']);
         }
 
-        for ($i = 0; $i < $file_count; $i++) {
-            if (!empty($files['name'][$i]) && !empty($files['size'][$i]) && intval($files['size'][$i]) > $max_file_size) {
-                wp_send_json_error(['message' => 'ファイルサイズが大きすぎます。20MB以内の画像を選択してください。']);
-            }
-        }
 
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -101,7 +95,7 @@ class SCG_Gallery_Upload {
 
             if (!empty($files['error'][$i])) {
                 if (in_array(intval($files['error'][$i]), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
-                    wp_send_json_error(['message' => 'ファイルサイズが大きすぎます。20MB以内の画像を選択してください。']);
+                    wp_send_json_error(['message' => 'サーバーのアップロード上限を超えています。PHP設定を確認してください。']);
                 }
                 continue;
             }
@@ -127,7 +121,7 @@ class SCG_Gallery_Upload {
                 continue;
             }
 
-            self::optimize_image($attachment_id);
+            SCG_Image_Optimizer::optimize_attachment($attachment_id);
 
             $filename_title = pathinfo($files['name'][$i], PATHINFO_FILENAME);
             $description = $descriptions[$i] ?? '';
@@ -185,43 +179,5 @@ class SCG_Gallery_Upload {
         return intval(get_post_meta($query->posts[0], '_scg_order', true)) + 1;
     }
 
-    private static function optimize_image($attachment_id) {
-        $file_path = get_attached_file($attachment_id);
-
-        if (!$file_path || !file_exists($file_path)) {
-            return false;
-        }
-
-        @ini_set('memory_limit', '512M');
-
-        $editor = wp_get_image_editor($file_path);
-
-        if (is_wp_error($editor)) {
-            return false;
-        }
-
-        if (method_exists($editor, 'maybe_exif_rotate')) {
-            $editor->maybe_exif_rotate();
-        }
-
-        $size = $editor->get_size();
-        $width = isset($size['width']) ? intval($size['width']) : 0;
-        $height = isset($size['height']) ? intval($size['height']) : 0;
-        $max_size = 2000;
-
-        if ($width > $max_size || $height > $max_size) {
-            $editor->resize($max_size, $max_size, false);
-        }
-
-        $editor->set_quality(82);
-        $saved = $editor->save($file_path);
-
-        if (is_wp_error($saved)) {
-            return false;
-        }
-
-        wp_update_attachment_metadata($attachment_id, wp_generate_attachment_metadata($attachment_id, $file_path));
-
-        return true;
-    }
 }
+

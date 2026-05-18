@@ -5,7 +5,6 @@ if (!defined('ABSPATH')) {
 
 class SCG_Content_Manage {
     const MAX_IMAGES = 3;
-    const MAX_FILE_SIZE = 20971520; // 20MB
 
     public static function init() {
         add_action('admin_post_scg_save_content', [__CLASS__, 'handle_save']);
@@ -115,7 +114,7 @@ class SCG_Content_Manage {
 
                 <div class="scg-content-images">
                     <h2>添付画像</h2>
-                    <p class="scg-help">最大3枚まで。対応形式：jpg / png / webp。1ファイル20MB以内。</p>
+                    <p class="scg-help">最大3枚まで。対応形式：jpg / png / webp。大きい画像は保存時に自動最適化されます。</p>
                     <?php for ($i = 1; $i <= self::MAX_IMAGES; $i++): ?>
                         <?php
                         $image_id = $content_id ? intval(get_post_meta($content_id, '_scg_image_' . $i, true)) : 0;
@@ -754,7 +753,7 @@ class SCG_Content_Manage {
         $errors = [
             'invalid' => '処理できませんでした。',
             'permission' => '権限がありません。',
-            'file_size' => '画像サイズが大きすぎます。最大20MBまでの画像を選択してください。',
+            'file_size' => 'サーバーのアップロード上限を超えています。PHP設定を確認してください。',
             'file_type' => '対応していない画像形式です。jpg / png / webp を選択してください。',
             'upload' => '画像のアップロードに失敗しました。',
         ];
@@ -984,10 +983,6 @@ class SCG_Content_Manage {
                 return 'upload';
             }
 
-            if (intval($_FILES[$field]['size']) > self::MAX_FILE_SIZE) {
-                return 'file_size';
-            }
-
             $file_type = wp_check_filetype_and_ext($_FILES[$field]['tmp_name'], $_FILES[$field]['name']);
             $allowed = ['image/jpeg', 'image/png', 'image/webp'];
             if (empty($file_type['type']) || !in_array($file_type['type'], $allowed, true)) {
@@ -999,6 +994,8 @@ class SCG_Content_Manage {
             if (is_wp_error($attachment_id)) {
                 return 'upload';
             }
+
+            SCG_Image_Optimizer::optimize_attachment($attachment_id);
 
             if ($existing_id && $existing_id !== intval($attachment_id)) {
                 wp_delete_attachment($existing_id, true);
@@ -1116,7 +1113,7 @@ class SCG_Content_Manage {
         $errors = [
             'invalid' => '処理できませんでした。入力内容を確認してください。',
             'permission' => '権限がありません。',
-            'file_size' => '画像サイズが大きすぎます。最大20MBまでの画像を選択してください。',
+            'file_size' => 'サーバーのアップロード上限を超えています。PHP設定を確認してください。',
             'file_type' => '対応していない画像形式です。jpg / png / webp を選択してください。',
             'upload' => '画像のアップロードに失敗しました。',
         ];

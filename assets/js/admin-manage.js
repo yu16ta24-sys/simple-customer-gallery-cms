@@ -282,15 +282,15 @@ jQuery(function ($) {
 
   function setUploadFiles(files) {
     const max = Number(SCG_MANAGE.max_files || 10);
-    const maxFileSize = Number(SCG_MANAGE.max_file_size || (20 * 1024 * 1024));
-    const maxFileSizeLabel = SCG_MANAGE.max_file_size_label || '20MB';
-    const oversizedFiles = files.filter(file => file.size > maxFileSize);
+    const maxFileSize = Number(SCG_MANAGE.max_file_size || 0);
+    const maxFileSizeLabel = SCG_MANAGE.max_file_size_label || 'サーバー上限';
+    const oversizedFiles = maxFileSize > 0 ? files.filter(file => file.size > maxFileSize) : [];
 
     if (oversizedFiles.length) {
       setMessage('ファイルサイズが大きすぎます。' + maxFileSizeLabel + '以内の画像を選択してください。', true);
     }
 
-    const validFiles = files.filter(file => file.type.match(/^image\/(jpeg|png|webp)$/) && file.size <= maxFileSize);
+    const validFiles = files.filter(file => file.type.match(/^image\/(jpeg|png|webp)$/) && (maxFileSize <= 0 || file.size <= maxFileSize));
 
     const currentDescriptions = collectCurrentDescriptions();
 

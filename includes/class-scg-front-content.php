@@ -420,12 +420,12 @@ class SCG_Front_Content {
                 continue;
             }
 
-            $url = wp_get_attachment_image_url($image_id, $size);
+            $url = SCG_Image_Optimizer::get_best_url($image_id, $size);
             if (!$url) {
                 continue;
             }
 
-            $full_url = wp_get_attachment_image_url($image_id, 'full') ?: $url;
+            $full_url = SCG_Image_Optimizer::get_best_url($image_id, 'full') ?: $url;
 
             $images[] = [
                 'id' => $image_id,

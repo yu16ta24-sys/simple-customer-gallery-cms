@@ -143,8 +143,8 @@ class SCG_Front_Gallery {
                 continue;
             }
 
-            $thumb = wp_get_attachment_image_url($attachment_id, 'large');
-            $full = wp_get_attachment_image_url($attachment_id, 'full');
+            $thumb = SCG_Image_Optimizer::get_best_url($attachment_id, 'large');
+            $full = SCG_Image_Optimizer::get_best_url($attachment_id, 'full');
             $meta = wp_get_attachment_metadata($attachment_id);
 
             if (!$thumb || !$full) {

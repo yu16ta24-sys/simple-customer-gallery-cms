@@ -346,6 +346,18 @@
         });
     }
 
+    function markAdjustmentUnsaved($panel) {
+        var $row = $panel.closest('.scg-slider-row');
+        $row.addClass('has-unsaved-adjustment');
+        $row.find('.scg-slider-row-unsaved').attr('aria-hidden', 'false');
+    }
+
+    function clearAdjustmentUnsaved($panel) {
+        var $row = $panel.closest('.scg-slider-row');
+        $row.removeClass('has-unsaved-adjustment');
+        $row.find('.scg-slider-row-unsaved').attr('aria-hidden', 'true');
+    }
+
     function saveAdjustment($panel) {
         var attachmentId = parseInt($panel.data('attachment-id'), 10);
         if (!attachmentId) {
@@ -370,6 +382,7 @@
                 return;
             }
             $status.text('保存しました。').removeClass('is-error');
+            clearAdjustmentUnsaved($panel);
             showNotice('表示位置を保存しました。', false);
         }).fail(function() {
             $status.text(messages.error || '保存に失敗しました。').addClass('is-error');
@@ -407,6 +420,7 @@
             var unit = $input.data('field') === 'zoom' ? '%' : '%';
             $input.closest('.scg-slider-adjust-row').find('output').text($input.val() + unit);
             applyAdjustPreview($panel, device);
+            markAdjustmentUnsaved($panel);
             $panel.find('.scg-slider-adjust-status').text('未保存の変更があります。').removeClass('is-error');
         });
 

@@ -271,8 +271,8 @@ class SCG_Admin {
                 'nonce' => wp_create_nonce('scg_manage_photos'),
                 'upload_nonce' => wp_create_nonce('scg_upload_photos'),
                 'max_files' => 10,
-                'max_file_size' => 20 * 1024 * 1024,
-                'max_file_size_label' => '20MB',
+                'max_file_size' => 0,
+                'max_file_size_label' => 'サーバー上限',
             ]);
         }
 
@@ -283,14 +283,14 @@ class SCG_Admin {
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('scg_top_slider_ajax'),
                 'max_items' => SCG_Top_Slider::MAX_ITEMS,
-                'max_file_size' => 20 * 1024 * 1024,
+                'max_file_size' => 0,
                 'messages' => [
                     'delete_confirm' => 'この画像を削除します。よろしいですか？',
                     'uploading' => 'アップロード中...',
                     'processing' => '画像を処理中...',
                     'complete' => 'アップロード完了',
                     'error' => '処理に失敗しました。',
-                    'too_large' => '画像サイズが大きすぎます。20MB以内の画像を選択してください。',
+                    'too_large' => 'サーバーのアップロード上限を超えています。PHP設定を確認してください。',
                     'max_reached' => '登録できる画像は最大12枚までです。',
                 ],
             ]);

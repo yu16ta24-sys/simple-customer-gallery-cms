@@ -117,7 +117,7 @@ class SCG_Top_Slider {
                         <p>追加できる残り枚数は <strong data-scg-slider-remaining><?php echo esc_html(max(0, self::MAX_ITEMS - count($items))); ?></strong> 枚です。</p>
                         <label class="scg-slider-file-drop" for="scg-slider-new-files">
                             <span class="scg-slider-file-drop-title">画像を選択またはドラッグ&ドロップ</span>
-                            <span class="scg-slider-file-drop-sub">jpg / png / webp、最大20MBまで</span>
+                            <span class="scg-slider-file-drop-sub">jpg / png / webp、大きい画像は自動最適化</span>
                             <input id="scg-slider-new-files" type="file" name="scg_slider_new[]" accept="image/jpeg,image/png,image/webp" multiple>
                         </label>
                         <p class="description">画像を選択すると自動でアップロードされ、一覧に追加されます。</p>
@@ -241,6 +241,7 @@ class SCG_Top_Slider {
             </div>
             <div class="scg-slider-meta">
                 <strong><?php echo esc_html($title ?: 'スライダー画像'); ?></strong>
+                <span class="scg-slider-row-unsaved" aria-hidden="true">未保存</span>
                 <?php if ($full): ?>
                     <a href="<?php echo esc_url($full); ?>" target="_blank" rel="noopener">画像を確認</a>
                 <?php endif; ?>
@@ -291,14 +292,13 @@ class SCG_Top_Slider {
             return new WP_Error('scg_invalid_type', 'jpg / png / webp の画像を選択してください。');
         }
 
-        if (!empty($file['size']) && $file['size'] > 20 * 1024 * 1024) {
-            return new WP_Error('scg_file_too_large', '画像サイズが大きすぎます。20MB以内の画像を選択してください。');
-        }
 
         $attachment_id = media_handle_upload($field_name, 0);
         if (is_wp_error($attachment_id)) {
             return $attachment_id;
         }
+
+        SCG_Image_Optimizer::optimize_attachment($attachment_id);
 
         return (int) $attachment_id;
     }
@@ -459,7 +459,7 @@ class SCG_Top_Slider {
 
         $slides = [];
         foreach ($items as $attachment_id) {
-            $image = wp_get_attachment_image_url($attachment_id, 'full');
+            $image = SCG_Image_Optimizer::get_best_url($attachment_id, 'full');
             if (!$image) {
                 continue;
             }
